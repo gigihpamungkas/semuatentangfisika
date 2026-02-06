@@ -6,3 +6,13 @@ url: https://gigihpamungkas.github.io/semuatentangfisika
 
 aux_links:
   Template Repository: https://github.com/just-the-docs/just-the-docs-template
+
+# Enable or disable MathJax
+math: mathjax
+mathjax:
+  load: [tex-mml-chtml]
+  tex:
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+    displayMath: [['$$', '$$'], ['\\[', '\\]']]
+
+    

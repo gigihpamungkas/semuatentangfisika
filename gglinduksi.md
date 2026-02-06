@@ -1,7 +1,7 @@
 ---
 layout: default
 title: ggl induksi
-parent: Elektromagnetik        # Nama bapaknya
+parent: Kemagnetan        # Nama bapaknya
 grand_parent: Materi # Nama kakeknya (WAJIB ADA)
 nav_order: 1
 ---

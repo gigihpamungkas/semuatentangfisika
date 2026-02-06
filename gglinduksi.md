@@ -11,7 +11,7 @@ Hukum Faraday menyatakan bahwa jika terjadi perubahan fluks magnetik di dalam se
 ## Simulasi Interaktif
 Eksperimen virtual ini memungkinkan Anda untuk menggerakkan magnet di sekitar kumparan dan mengamati arus listrik yang dihasilkan pada Amperemeter.
 
-<iframe src="assets/simulasi/gglinduksi.html" width="100%" height="800px" frameborder="0"></iframe>
+<iframe src="Asset/simulasi/gglinduksi.html" width="100%" height="800px" frameborder="0"></iframe>
 
 ## Konsep Utama
 Besarnya GGL induksi yang dihasilkan dipengaruhi oleh beberapa faktor sesuai persamaan:

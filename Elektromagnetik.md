@@ -1,5 +1,7 @@
 ---
 layout: default
-title: Fenomena Elektromagnetik      # Nama yang muncul di sidebar
-nav_order: 2            # Urutan (makin kecil, makin atas)
+title: Elektromagnetik
+parent: Materi
+has_children: true      # WAJIB TRUE agar bisa punya "cucu"
+nav_order: 1
 ---

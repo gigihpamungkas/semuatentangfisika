@@ -1,7 +1,9 @@
 ---
 layout: default
-title: GGL Induksi (Hukum Faraday)
-nav_order: 3
+title: ggl induksi
+parent: Elektromagnetik        # Nama bapaknya
+grand_parent: Materi # Nama kakeknya (WAJIB ADA)
+nav_order: 1
 ---
 
 # GGL Induksi & Hukum Faraday

@@ -21,6 +21,12 @@ Besarnya GGL induksi yang dihasilkan dipengaruhi oleh beberapa faktor sesuai per
 
 $$\epsilon = -N \frac{\Delta \Phi}{\Delta t}$$
 
+Berikut adalah rumusnya:
+
+$$\epsilon = -N \frac{\Delta \Phi}{\Delta t}$$
+
+Di mana $\epsilon$ adalah GGL.
+
 Keterangan:
 * **$N$**: Jumlah lilitan kumparan.
 * **$\Delta \Phi$**: Perubahan fluks magnetik (dalam simulasi dipengaruhi oleh Kuat Medan $B$).

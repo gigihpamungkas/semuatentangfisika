@@ -8,6 +8,8 @@ nav_order: 1
 
 ![antena parabola besar yang digunakan fisikawan NASA selama bertahun-tahun untuk berkomunikasi dengan kapal dan perangkat yang menyelesaikan misi eksplorasi tata surya](semuatentangfisika/Asset/gambar/1.A.1radar.png)
 ![Deskripsi Gambar](./Asset/gambar/1.A.1radar.png)
+
+<img src="{{ '/Asset/gambar/1.A.1radar.png' | relative_url }}" alt="Deskripsi" width="100%">
 Fisika lebih dari sekadar menghitung momentum bola biliar yang saling bertabrakan atau gesekan yang bekerja pada ban mobil yang melaju kencang. Fisika mencakup studi tentang hampir setiap bentuk materi dan bagaimana materi tersebut berinteraksi dengan materi lain dan dengan energi dalam berbagai bentuk. Gambar ini menunjukkan salah satu dari beberapa antena parabola besar yang digunakan fisikawan NASA selama bertahun-tahun untuk berkomunikasi dengan kapal dan perangkat yang menyelesaikan misi eksplorasi tata surya.
 
 # Apa itu Fisika?

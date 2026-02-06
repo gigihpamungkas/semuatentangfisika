@@ -6,10 +6,7 @@ grand_parent: Materi # Nama kakeknya (WAJIB ADA)
 nav_order: 1
 ---
 
-![antena parabola besar yang digunakan fisikawan NASA selama bertahun-tahun untuk berkomunikasi dengan kapal dan perangkat yang menyelesaikan misi eksplorasi tata surya](semuatentangfisika/Asset/gambar/1.A.1radar.png)
-![Deskripsi Gambar](./Asset/gambar/1.A.1radar.png)
-
-<img src="{{ '/Asset/gambar/1.A.1radar.png' | relative_url }}" alt="Deskripsi" width="100%">
+<img src="{{ '/Asset/gambar/1.A.1radar.png' | relative_url }}" alt="" width="100%">
 Fisika lebih dari sekadar menghitung momentum bola biliar yang saling bertabrakan atau gesekan yang bekerja pada ban mobil yang melaju kencang. Fisika mencakup studi tentang hampir setiap bentuk materi dan bagaimana materi tersebut berinteraksi dengan materi lain dan dengan energi dalam berbagai bentuk. Gambar ini menunjukkan salah satu dari beberapa antena parabola besar yang digunakan fisikawan NASA selama bertahun-tahun untuk berkomunikasi dengan kapal dan perangkat yang menyelesaikan misi eksplorasi tata surya.
 
 # Apa itu Fisika?
@@ -21,4 +18,6 @@ Fisika merupakan ilmu yang bertujuan untuk mendeskripsikan aspek-aspek fundament
     
 Fisika menjelaskan hubungan antara kecepatan suatu benda, jarak yang ditempuhnya, dan waktu yang dibutuhkan untuk menempuh jarak tersebut. Saat Anda menggunakan perangkat GPS di dalam kendaraan, perangkat tersebut memanfaatkan hubungan fisika ini untuk menentukan waktu tempuh dari satu lokasi ke lokasi lain.
 
-![Fisika menjelaskan bagaimana muatan listrik mengalir melalui sirkuit perangkat ini. Para insinyur menggunakan pengetahuan fisika mereka untuk membangun ponsel pintar dengan fitur-fitur yang akan disukai konsumen, seperti fungsi GPS. GPS menggunakan persamaan fisika untuk menentukan waktu tempuh antara dua lokasi pada peta](/Asset/gambar/1.A.2gmaps.png)
+<img src="{{ '/Asset/gambar/1.A.2gmaps.png' | relative_url }}" alt="" width="100%">
+
+Fisika menjelaskan bagaimana muatan listrik mengalir melalui sirkuit perangkat ini. Para insinyur menggunakan pengetahuan fisika mereka untuk membangun ponsel pintar dengan fitur-fitur yang akan disukai konsumen, seperti fungsi GPS. GPS menggunakan persamaan fisika untuk menentukan waktu tempuh antara dua lokasi pada peta

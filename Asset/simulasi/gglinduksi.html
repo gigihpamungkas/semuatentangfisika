@@ -1,0 +1,205 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+
+<style>
+  body {
+  margin: 0;
+  padding: 20px;
+  background-color: #f0f2f5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#app-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+#ui-panel {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 800px;
+}
+
+h1 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+#slider-label {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+canvas {
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+</style>
+
+<div id="app-container">
+  <div id="ui-panel">
+    <h1>Eksperimen Hukum Faraday Pro</h1>
+    
+    <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px;">
+        <div class="slider-label">
+          Jumlah Lilitan (N): <span id="n-value" style="color: #e67e22; font-weight: bold;">20</span>
+        </div>
+        <div id="n-slider-holder"></div>
+      </div>
+      
+      <div style="flex: 1; min-width: 200px;">
+        <div class="slider-label">
+          Kuat Medan (B): <span id="b-value" style="color: #3498db; font-weight: bold;">1.5</span> Tesla
+        </div>
+        <div id="b-slider-holder"></div>
+      </div>
+    </div>
+
+    <button id="reset-btn" style="margin-top: 15px; padding: 8px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold;">Reset Eksperimen</button>
+  </div>
+  
+  <div id="canvas-holder"></div>
+</div>
+
+<script>
+let magnetX, prevMagnetX, current = 0;
+let nSlider, bSlider;
+
+function setup() {
+  let canvas = createCanvas(800, 450);
+  canvas.parent('canvas-holder');
+  
+  magnetX = 150;
+  prevMagnetX = 150;
+
+  // Inisialisasi Slider
+  nSlider = createSlider(1, 100, 20, 1);
+  nSlider.parent('n-slider-holder');
+  nSlider.style('width', '100%');
+
+  bSlider = createSlider(0.1, 5.0, 1.5, 0.1);
+  bSlider.parent('b-slider-holder');
+  bSlider.style('width', '100%');
+
+  // Logika Tombol Reset
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    nSlider.value(20);
+    bSlider.value(1.5);
+    magnetX = 150;
+    prevMagnetX = 150;
+  });
+}
+
+function draw() {
+  background(255);
+  
+  // UPDATE ANGKA DI UI
+  document.getElementById('n-value').innerText = nSlider.value();
+  document.getElementById('b-value').innerText = bSlider.value().toFixed(1);
+
+  // LOGIKA FISIKA
+  magnetX = lerp(prevMagnetX, mouseX, 0.2); // Membuat pergerakan magnet lebih smooth
+  magnetX = constrain(magnetX, 50, 750);
+  
+  let velocity = magnetX - prevMagnetX;
+  let nTurns = nSlider.value();
+  let bField = bSlider.value();
+  
+  let distanceToCoil = abs(magnetX - 400);
+  if (distanceToCoil < 200) {
+    // Rumus epsilon = -N * (dPhi/dt). 
+    // Faktor 0.04 disesuaikan agar skala Amperemeter tetap masuk akal
+    current = velocity * nTurns * bField * exp(-distanceToCoil * 0.04) * 0.08;
+  } else {
+    current = 0;
+  }
+
+  // VISUALISASI
+  drawMagneticField(magnetX - 20, height/2, bField);
+  drawCoil(400, height/2, nTurns, current);
+  drawMagnet(magnetX, height/2);
+  drawAmperemeter(680, 120, current);
+  
+  prevMagnetX = magnetX;
+}
+
+// --- FUNGSI DRAWING (Sama seperti sebelumnya dengan sedikit polesan) ---
+
+function drawMagnet(x, y) {
+  rectMode(CENTER);
+  noStroke();
+  fill(0, 50, 200); rect(x - 45, y, 40, 50, 5); // South
+  fill(220, 20, 60); rect(x - 5, y, 40, 50, 5);  // North
+  fill(255); textSize(16); textAlign(CENTER, CENTER);
+  text("S", x - 45, y); text("N", x - 5, y);
+}
+
+function drawCoil(x, y, n, cur) {
+  stroke(184, 115, 51);
+  strokeWeight(2 + n/50); // Kawat menebal jika lilitan banyak
+  noFill();
+  // Kita batasi visualisasi lilitan agar tidak menumpuk (max 15 visual lilitan)
+  let visualTurns = min(n, 15); 
+  for (let i = 0; i < visualTurns; i++) {
+    let xOff = i * 10 - (visualTurns * 5);
+    ellipse(x + xOff, y, 50, 150);
+    if (abs(cur) > 1) {
+      drawArrow(x + xOff, y - 75, cur > 0 ? "UP" : "DOWN");
+    }
+  }
+}
+
+function drawArrow(x, y, dir) {
+  push();
+  stroke(46, 204, 113); fill(46, 204, 113);
+  translate(x, y);
+  if (dir === "DOWN") rotate(PI);
+  line(0, -10, 0, 10);
+  triangle(-5, -5, 5, -5, 0, -15);
+  pop();
+}
+
+function drawMagneticField(x, y, strength) {
+  noFill();
+  let alpha = map(strength, 0.1, 5.0, 10, 150);
+  stroke(0, 100, 255, alpha);
+  strokeWeight(strength); 
+  for (let i = 1; i <= 4; i++) {
+    ellipse(x, y, 80 * i, 30 * i);
+  }
+}
+
+function drawAmperemeter(x, y, val) {
+  push();
+  translate(x, y);
+  fill(245); stroke(50); strokeWeight(2);
+  rect(0, 0, 180, 160, 10);
+  
+  // Layar Digital Arus
+  fill(20, 40, 20); rect(0, 80, 110, 30, 5);
+  fill(100, 255, 100); noStroke();
+  textAlign(CENTER, CENTER); textSize(16);
+  text(val.toFixed(2) + " mA", 0, 80);
+  
+  // Skala
+  noFill(); stroke(100); strokeWeight(1);
+  arc(0, 30, 120, 120, PI, TWO_PI);
+  
+  // Jarum dengan pembatasan (Clamp) agar tidak berputar 360 derajat
+  let angle = map(constrain(val, -150, 150), -150, 150, -HALF_PI, HALF_PI);
+  push();
+  translate(0, 30); rotate(angle);
+  stroke(255, 0, 0); strokeWeight(3);
+  line(0, 0, 0, -55);
+  pop();
+  
+  fill(50); textSize(12); text("AMPEREMETER", 0, -70);
+  pop();
+}
+</script>

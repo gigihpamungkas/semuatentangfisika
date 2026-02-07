@@ -121,16 +121,16 @@ function draw() {
 
   // --- DRAW TRANSFORMER CORE ---
   fill(180); stroke(100); strokeWeight(2);
-  rect(325, 120, 200, 260, 10); // Core utama
+  rect(225, 120, 200, 260, 10); // Core utama
   fill(255); 
-  rect(365, 160, 120, 180, 5);  // Lubang tengah
+  rect(265, 160, 120, 180, 5);  // Lubang tengah
 
   // --- DRAW FLUX ANIMATION ---
   drawFlux(AC, Vp_rms);
 
   // --- DRAW COILS ---
-  drawCoil(345, 160, Np/10, AC * Vp_rms, "PRIMER");
-  drawCoil(505, 160, Ns/10, AC * Vs_rms, "SEKUNDER");
+  drawCoil(245, 160, Np/10, AC * Vp_rms, "PRIMER");
+  drawCoil(355, 160, Ns/10, AC * Vs_rms, "SEKUNDER");
 
   // --- DRAW VOLTMETERS ---
   drawMeter(75, 250, Vp_rms, "VOLTMETER Vp");

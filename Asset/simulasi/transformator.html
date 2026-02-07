@@ -9,7 +9,7 @@
 }
 
 #app-container {
-  max-width: 900px;
+  max-width: 800px;
   margin: auto;
   display: flex;
   flex-direction: column;
@@ -133,8 +133,8 @@ function draw() {
   drawCoil(505, 160, Ns/10, AC * Vs_rms, "SEKUNDER");
 
   // --- DRAW VOLTMETERS ---
-  drawMeter(125, 250, Vp_rms, "VOLTMETER Vp");
-  drawMeter(725, 250, Vs_rms, "VOLTMETER Vs");
+  drawMeter(100, 250, Vp_rms, "VOLTMETER Vp");
+  drawMeter(600, 250, Vs_rms, "VOLTMETER Vs");
 
   time += 0.1;
 }

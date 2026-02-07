@@ -113,11 +113,11 @@ function draw() {
   strokeWeight(3);
   noFill();
   // Kabel Primer (Kiri)
-  line(125, 200, 325, 200);
-  line(125, 300, 325, 300);
+  line(75, 200, 225, 200);
+  line(75, 300, 225, 300);
   // Kabel Sekunder (Kanan)
-  line(525, 200, 725, 200);
-  line(525, 300, 725, 300);
+  line(425, 200, 575, 200);
+  line(425, 300, 575, 300);
 
   // --- DRAW TRANSFORMER CORE ---
   fill(180); stroke(100); strokeWeight(2);
@@ -133,8 +133,8 @@ function draw() {
   drawCoil(505, 160, Ns/10, AC * Vs_rms, "SEKUNDER");
 
   // --- DRAW VOLTMETERS ---
-  drawMeter(100, 250, Vp_rms, "VOLTMETER Vp");
-  drawMeter(600, 250, Vs_rms, "VOLTMETER Vs");
+  drawMeter(75, 250, Vp_rms, "VOLTMETER Vp");
+  drawMeter(575, 250, Vs_rms, "VOLTMETER Vs");
 
   time += 0.1;
 }

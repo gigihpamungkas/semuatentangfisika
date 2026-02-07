@@ -113,32 +113,32 @@ function draw() {
   strokeWeight(3);
   noFill();
   // Kabel Primer (Kiri): 125-100=25, 325-100=225
-  line(25, 200, 225, 200);
-  line(25, 300, 225, 300);
+  line(75, 200, 250, 200);
+  line(75, 300, 250, 300);
   // Kabel Sekunder (Kanan): 525-100=425, 725-100=625
-  line(425, 200, 625, 200);
-  line(425, 300, 625, 300);
+  line(450, 200, 650, 200);
+  line(450, 300, 650, 300);
 
   // --- DRAW TRANSFORMER CORE ---
   fill(180); stroke(100); strokeWeight(2);
   // Core utama: 325-100=225
-  rect(225, 120, 200, 260, 10); 
+  rect(250, 120, 200, 260, 10); 
   fill(255); 
   // Lubang tengah: 365-100=265
-  rect(265, 160, 120, 180, 5);  
+  rect(290, 160, 120, 180, 5);  
 
   // --- DRAW FLUX ANIMATION ---
   drawFlux(AC, Vp_rms);
 
   // --- DRAW COILS ---
   // Coil Primer: 345-100=245 | Coil Sekunder: 505-100=405
-  drawCoil(245, 160, Np/10, AC * Vp_rms, "PRIMER");
-  drawCoil(405, 160, Ns/10, AC * Vs_rms, "SEKUNDER");
+  drawCoil(270, 160, Np/10, AC * Vp_rms, "PRIMER");
+  drawCoil(430, 160, Ns/10, AC * Vs_rms, "SEKUNDER");
 
   // --- DRAW VOLTMETERS ---
   // Voltmeter Vp: 125-100=25 | Voltmeter Vs: 725-100=625
-  drawMeter(25, 250, Vp_rms, "VOLTMETER Vp");
-  drawMeter(625, 250, Vs_rms, "VOLTMETER Vs");
+  drawMeter(50, 250, Vp_rms, "VOLTMETER Vp");
+  drawMeter(650, 250, Vs_rms, "VOLTMETER Vs");
 
   time += 0.1;
 }
@@ -149,7 +149,7 @@ function drawFlux(factor, intensity) {
   stroke(0, 100, 255, fluxAlpha * abs(factor));
   strokeWeight(map(intensity, 0, 20, 0, 8));
   noFill();
-  rect(345, 140, 160, 220, 10);
+  rect(290, 140, 160, 220, 10);
   pop();
 }
 

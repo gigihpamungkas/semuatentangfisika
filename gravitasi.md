@@ -1,6 +1,6 @@
 ---
 layout: default
-title: transformator
+title: gravitasi
 parent: Kemagnetan        # Nama bapaknya
 grand_parent: Materi # Nama kakeknya (WAJIB ADA)
 mathjax: true

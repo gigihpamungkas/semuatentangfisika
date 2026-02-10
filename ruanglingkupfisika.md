@@ -1,4 +1,4 @@
----
+//---
 layout: default
 title: Ruang Lingkup Fisika
 parent: Pengantar Fisika        # Nama bapaknya

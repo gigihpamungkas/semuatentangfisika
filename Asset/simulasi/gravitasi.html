@@ -1,0 +1,594 @@
+<!-- Chosen Palette: Warm Paper & Engineering (Cream/Off-White Background #FDFBF7, Slate Text #334155, Tech Blue #0EA5E9 for Primary, Burnt Orange #F97316 for Highlights) -->
+
+<!-- Application Structure Plan: 
+    1. Hero Section: Introduction to the topic (Physics in Code) based on the "Menaklukan Gravitasi" report. Hook regarding game physics.
+    2. Concept Explorer: A 3-column layout breaking down the "Tiga Serangkai Gerakan" (Posisi, Kecepatan, Percepatan). Interactive cards to visualize definitions.
+    3. The Logic Loop: A step-by-step interactive timeline/flow visualization explaining the `draw()` loop logic described in the report.
+    4. The Lab (Core Interaction): A Split-View Dashboard. 
+       - Left: The Physics Simulation Canvas (The "Visual").
+       - Right: Real-time Data Analysis using Chart.js (The "Data"). This charts the Height and Velocity over time, bridging the gap between code/math and visual outcome.
+       - Bottom: Control panel for Gravity and Elasticity.
+    5. Takeaways: Summary cards on why this matters (Games, Particles, Art).
+    
+    Why this structure? It follows a "Learn -> Understand -> Experiment" flow. We start with theory, move to logic, and finish with a hands-on lab that treats the simulation as a dataset to be analyzed, fitting the "Data Analyst" persona.
+-->
+
+<!-- Visualization & Content Choices:
+    1. Hero Text: Standard HTML/Tailwind typography for engagement.
+    2. Concept Cards: HTML Grid with JS-driven numeric updates to show how variables relate (No SVG).
+    3. Logic Flow: Vertical Step-List using Tailwind borders/spacing. JS highlights active steps.
+    4. Simulation: HTML5 Canvas for the ball animation (Best for high-frame-rate rendering).
+    5. Data Analysis: Chart.js Line Chart. 
+       - Goal: Visualize the mathematical behavior of gravity (parabolic curve of position, linear saw-tooth of velocity).
+       - Interaction: Real-time updates as the simulation runs.
+       - Justification: Shows the "hidden" numbers behind the animation.
+    6. Controls: HTML Range Inputs to modify simulation parameters.
+-->
+
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menaklukan Gravitasi: Laporan Interaktif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #e6d4af; /* Warm off-white */
+            color: #334155; /* Slate 700 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        canvas {
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+        <!-- Hero Section -->
+        <section class="max-w-5xl mx-auto px-4 py-16 text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
+                Menaklukan <span class="text-sky-600">Gravitasi</span> dengan Kode
+            </h1>
+            <p class="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+                Bagaimana karakter game melompat dan jatuh dengan alami? Jawabannya bukan sihir, tapi 
+                <span class="font-semibold text-orange-600">Fisika</span> dan 
+                <span class="font-semibold text-orange-600">Matematika</span>. 
+                Mari kita bedah rahasia di balik pergerakan digital.
+            </p>
+            <div class="mt-8">
+                <span class="inline-block bg-orange-100 text-orange-800 text-sm font-semibold px-3 py-1 rounded-full">Berdasarkan Laporan Teknis</span>
+            </div>
+        </section>
+
+        <!-- Concept Section: Tiga Serangkai -->
+        <section id="theory" class="max-w-6xl mx-auto px-4 py-12">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-800 mb-4 border-l-4 border-sky-500 pl-4">Konsep Dasar: Tiga Serangkai</h2>
+                <p class="text-slate-600">
+                    Dalam laporan "Simulasi Fisika", dijelaskan bahwa untuk menciptakan gerakan alami, kita hanya perlu memanipulasi tiga variabel utama. 
+                    Berikut adalah hierarki variabel tersebut:
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Card 1: Posisi -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-stone-100 hover:shadow-lg transition">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl mb-4 font-bold">1</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Posisi (Position)</h3>
+                    <p class="text-slate-500 text-sm mb-4">"Di mana aku?"</p>
+                    <div class="bg-stone-50 p-4 rounded text-sm font-mono text-slate-700">
+                        x: <span id="demo-pos-x">100</span><br>
+                        y: <span id="demo-pos-y">50</span>
+                    </div>
+                    <p class="mt-4 text-slate-600 text-sm">
+                        Koordinat objek di layar. Jika <code>y</code> bertambah, objek turun.
+                    </p>
+                </div>
+
+                <!-- Card 2: Kecepatan -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-stone-100 hover:shadow-lg transition">
+                    <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-2xl mb-4 font-bold">2</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Kecepatan (Velocity)</h3>
+                    <p class="text-slate-500 text-sm mb-4">"Seberapa cepat aku?"</p>
+                    <div class="bg-stone-50 p-4 rounded text-sm font-mono text-slate-700 border-l-4 border-indigo-400">
+                        Posisi = Posisi + <span class="font-bold text-indigo-600">Kecepatan</span>
+                    </div>
+                    <p class="mt-4 text-slate-600 text-sm">
+                        Perubahan posisi setiap frame. Mengatur arah dan laju gerak.
+                    </p>
+                </div>
+
+                <!-- Card 3: Percepatan -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-stone-100 hover:shadow-lg transition">
+                    <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-2xl mb-4 font-bold">3</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Percepatan (Acceleration)</h3>
+                    <p class="text-slate-500 text-sm mb-4">"Siapa yang mendorongku?"</p>
+                    <div class="bg-stone-50 p-4 rounded text-sm font-mono text-slate-700 border-l-4 border-orange-400">
+                        Kecepatan = Kecepatan + <span class="font-bold text-orange-600">Gravitasi</span>
+                    </div>
+                    <p class="mt-4 text-slate-600 text-sm">
+                        Gaya yang mengubah kecepatan. Gravitasi terus menarik ke bawah.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logic Section: The Loop -->
+        <section id="logic" class="bg-stone-100 py-16">
+            <div class="max-w-4xl mx-auto px-4">
+                <h2 class="text-3xl font-bold text-slate-800 mb-6 text-center">Algoritma: The Loop</h2>
+                <p class="text-center text-slate-600 mb-10 max-w-2xl mx-auto">
+                    Komputer menggambar ulang layar 60 kali per detik. Di setiap bingkai (frame), logika berikut dijalankan secara berurutan.
+                </p>
+
+                <div class="space-y-4">
+                    <!-- Step 1 -->
+                    <div class="logic-step bg-white p-4 rounded-lg shadow-sm border-l-4 border-slate-300 flex items-center transition opacity-50 hover:opacity-100" id="step-1">
+                        <div class="flex-shrink-0 w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-600 mr-4">1</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Mulai Loop (Frame Baru)</h4>
+                            <p class="text-sm text-slate-500">Fungsi <code>draw()</code> dipanggil.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="logic-step bg-white p-4 rounded-lg shadow-sm border-l-4 border-orange-400 flex items-center transition opacity-50 hover:opacity-100" id="step-2">
+                        <div class="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center font-bold text-orange-600 mr-4">2</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Terapkan Gravitasi</h4>
+                            <p class="text-sm text-slate-500"><code>velocity.y += gravity</code> (Bola makin cepat jatuh).</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="logic-step bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-400 flex items-center transition opacity-50 hover:opacity-100" id="step-3">
+                        <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-600 mr-4">3</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Gerakkan Bola</h4>
+                            <p class="text-sm text-slate-500"><code>position.add(velocity)</code> (Posisi diperbarui).</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="logic-step bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-400 flex items-center transition opacity-50 hover:opacity-100" id="step-4">
+                        <div class="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center font-bold text-purple-600 mr-4">4</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Cek Lantai (Tabrakan)</h4>
+                            <p class="text-sm text-slate-500">Jika menyentuh bawah, balikkan arah kecepatan (Pantul!).</p>
+                        </div>
+                    </div>
+
+                     <!-- Step 5 -->
+                     <div class="logic-step bg-white p-4 rounded-lg shadow-sm border-l-4 border-emerald-400 flex items-center transition opacity-50 hover:opacity-100" id="step-5">
+                        <div class="flex-shrink-0 w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center font-bold text-emerald-600 mr-4">5</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Gambar Ulang</h4>
+                            <p class="text-sm text-slate-500">Hapus layar lama, gambar bola di posisi baru.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center">
+                    <button id="anim-logic-btn" class="text-sky-600 font-semibold hover:underline">
+                        ▶ Animasi Alur Logika
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lab Section: The Simulation & Data -->
+        <section id="lab" class="max-w-7xl mx-auto px-4 py-16">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2 border-l-4 border-sky-500 pl-4">Laboratorium Analisis Gravitasi</h2>
+                <p class="text-slate-600 max-w-3xl">
+                    Di sini kita melihat teori beraksi. Panel kiri menampilkan simulasi visual bola jatuh. 
+                    Panel kanan menampilkan <strong>Analisis Data Real-time</strong> dari ketinggian bola.
+                    Perhatikan bagaimana grafik membentuk pola yang konsisten dengan hukum fisika.
+                </p>
+            </div>
+
+            <!-- Grid Layout for Lab -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Left: Simulation Canvas -->
+                <div class="bg-white p-4 rounded-xl shadow-lg border border-stone-200 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-700">Visualisasi Objek</h3>
+                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Canvas API</span>
+                    </div>
+                    
+                    <!-- Sim Container -->
+                    <div class="relative w-full bg-slate-900 rounded-lg overflow-hidden" style="height: 400px;">
+                        <canvas id="simCanvas" width="600" height="400" class="w-full h-full object-cover"></canvas>
+                        <div class="absolute top-4 left-4 text-white text-xs font-mono opacity-70 pointer-events-none">
+                            <p>Pos Y: <span id="monitor-y">0</span></p>
+                            <p>Vel Y: <span id="monitor-vel">0</span></p>
+                        </div>
+                        <div class="absolute bottom-4 right-4 text-white text-xs opacity-50">
+                            Klik untuk Reset Bola
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-stone-50 p-4 rounded-lg">
+                        <div>
+                            <label class="flex justify-between text-sm font-semibold text-slate-600 mb-2">
+                                Gravitasi (Gaya Tarik)
+                                <span id="lbl-gravity" class="text-sky-600">0.5</span>
+                            </label>
+                            <input type="range" id="inp-gravity" min="0" max="2" step="0.1" value="0.5" class="w-full h-2 bg-stone-300 rounded-lg appearance-none cursor-pointer accent-sky-600">
+                        </div>
+                        <div>
+                            <label class="flex justify-between text-sm font-semibold text-slate-600 mb-2">
+                                Elastisitas (Pantulan)
+                                <span id="lbl-bounce" class="text-purple-600">0.8</span>
+                            </label>
+                            <input type="range" id="inp-bounce" min="0.1" max="1.1" step="0.1" value="0.8" class="w-full h-2 bg-stone-300 rounded-lg appearance-none cursor-pointer accent-purple-600">
+                        </div>
+                    </div>
+                    <div class="mt-4 flex gap-2">
+                         <button id="btn-restart" class="flex-1 bg-slate-800 text-white py-2 rounded hover:bg-slate-700 transition text-sm font-medium">Reset Posisi Bola</button>
+                         <button id="btn-pause" class="flex-1 bg-stone-200 text-slate-700 py-2 rounded hover:bg-stone-300 transition text-sm font-medium">Jeda Simulasi</button>
+                    </div>
+                </div>
+
+                <!-- Right: Data Analysis Charts -->
+                <div class="bg-white p-4 rounded-xl shadow-lg border border-stone-200 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-700">Analisis Data Gerak</h3>
+                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Chart.js</span>
+                    </div>
+
+                    <div class="flex-grow flex flex-col gap-4">
+                        <!-- Chart 1: Height Over Time -->
+                        <div class="bg-white rounded border border-stone-100 p-2 flex-1 flex flex-col">
+                            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Ketinggian (Y) vs Waktu</h4>
+                            <div class="chart-container flex-grow relative" style="height: 180px; width: 100%;">
+                                <canvas id="chartHeight"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: Velocity Over Time -->
+                        <div class="bg-white rounded border border-stone-100 p-2 flex-1 flex flex-col">
+                            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Kecepatan (Velocity) vs Waktu</h4>
+                             <div class="chart-container flex-grow relative" style="height: 180px; width: 100%;">
+                                <canvas id="chartVelocity"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-yellow-50 border border-yellow-100 rounded text-xs text-yellow-800">
+                        <strong>Insight Analis:</strong> Perhatikan grafik atas membentuk kurva parabola (gerak jatuh bebas), sedangkan grafik bawah membentuk pola "gerigi gergaji" karena kecepatan bertambah linear lalu berbalik arah saat memantul.
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Use Cases Section -->
+        <section class="bg-slate-900 py-16 text-white">
+            <div class="max-w-5xl mx-auto px-4 text-center">
+                <h2 class="text-3xl font-bold mb-8">Mengapa Ini Penting?</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700">
+                        <div class="text-4xl mb-4">🎮</div>
+                        <h3 class="font-bold text-xl mb-2">Game Platformer</h3>
+                        <p class="text-slate-400 text-sm">Dasar dari setiap lompatan Mario atau Sonic.</p>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700">
+                        <div class="text-4xl mb-4">✨</div>
+                        <h3 class="font-bold text-xl mb-2">Efek Partikel</h3>
+                        <p class="text-slate-400 text-sm">Membuat ledakan, hujan, dan kembang api terlihat nyata.</p>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700">
+                        <div class="text-4xl mb-4">🎨</div>
+                        <h3 class="font-bold text-xl mb-2">Seni Generatif</h3>
+                        <p class="text-slate-400 text-sm">Menciptakan pola organik yang kompleks dengan kode sederhana.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-950 text-slate-500 py-8 text-center text-sm">
+        <p>&copy; 2024 FisikaKode Edukasi. Dibuat berdasarkan Laporan Teknis Simulasi Fisika.</p>
+    </footer>
+
+    <!-- LOGIC SCRIPT -->
+    <script>
+        // --- NAVIGATION & UI STATE ---
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- LOGIC ANIMATION FLOW ---
+        const steps = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5'];
+        let currentStepIndex = 0;
+        let animationInterval;
+        const btnAnim = document.getElementById('anim-logic-btn');
+
+        btnAnim.addEventListener('click', () => {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+                btnAnim.innerText = "▶ Animasi Alur Logika";
+                steps.forEach(id => document.getElementById(id).classList.remove('opacity-100', 'scale-105', 'bg-sky-50'));
+                steps.forEach(id => document.getElementById(id).classList.add('opacity-50'));
+            } else {
+                btnAnim.innerText = "⏹ Stop Animasi";
+                animationInterval = setInterval(() => {
+                    // Reset previous
+                    steps.forEach(id => {
+                        const el = document.getElementById(id);
+                        el.classList.remove('opacity-100', 'scale-105', 'bg-sky-50');
+                        el.classList.add('opacity-50');
+                    });
+
+                    // Highlight current
+                    const activeEl = document.getElementById(steps[currentStepIndex]);
+                    activeEl.classList.remove('opacity-50');
+                    activeEl.classList.add('opacity-100', 'scale-105', 'bg-sky-50');
+
+                    currentStepIndex = (currentStepIndex + 1) % steps.length;
+                }, 800);
+            }
+        });
+
+
+        // --- PHYSICS SIMULATION & DATA ANALYSIS ---
+        
+        // Configuration
+        const config = {
+            gravity: 0.5,
+            bounce: 0.8,
+            width: 600,
+            height: 400
+        };
+
+        // State
+        let ball = {
+            x: 300,
+            y: 50,
+            vx: 2,
+            vy: 0,
+            radius: 15,
+            color: '#0EA5E9' // Sky 500
+        };
+        
+        let isPaused = false;
+        let animationFrameId;
+
+        // DOM Elements for Sim
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const monitorY = document.getElementById('monitor-y');
+        const monitorVel = document.getElementById('monitor-vel');
+
+        // Inputs
+        const inpGravity = document.getElementById('inp-gravity');
+        const inpBounce = document.getElementById('inp-bounce');
+        const lblGravity = document.getElementById('lbl-gravity');
+        const lblBounce = document.getElementById('lbl-bounce');
+
+        // Event Listeners for Controls
+        inpGravity.addEventListener('input', (e) => {
+            config.gravity = parseFloat(e.target.value);
+            lblGravity.innerText = config.gravity;
+        });
+
+        inpBounce.addEventListener('input', (e) => {
+            config.bounce = parseFloat(e.target.value);
+            lblBounce.innerText = config.bounce;
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', resetBall);
+        document.getElementById('btn-pause').addEventListener('click', () => {
+            isPaused = !isPaused;
+            document.getElementById('btn-pause').innerText = isPaused ? "Lanjutkan Simulasi" : "Jeda Simulasi";
+            if (!isPaused) loop();
+        });
+
+        canvas.addEventListener('click', resetBall);
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = 50;
+            ball.vx = (Math.random() * 4) - 2;
+            ball.vy = 0;
+            
+            // Reset charts data
+            chartHeight.data.labels = [];
+            chartHeight.data.datasets[0].data = [];
+            chartVelocity.data.labels = [];
+            chartVelocity.data.datasets[0].data = [];
+            frameCount = 0;
+        }
+
+        // --- CHART.JS SETUP ---
+        const maxDataPoints = 100; // Limit history to keep performance high
+        let frameCount = 0;
+
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false, // Disable chart animation for performance in real-time
+            interaction: {
+                intersect: false,
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false } // Disable tooltips for pure monitoring look
+            },
+            scales: {
+                x: { display: false }, // Hide X axis labels (time) for clean look
+                y: { grid: { color: '#e5e7eb' } }
+            },
+            elements: {
+                point: { radius: 0 } // Hide points, just line
+            }
+        };
+
+        // Chart 1: Height
+        const ctxHeight = document.getElementById('chartHeight').getContext('2d');
+        const chartHeight = new Chart(ctxHeight, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Ketinggian (Y)',
+                    data: [],
+                    borderColor: '#F97316', // Orange
+                    borderWidth: 2,
+                    tension: 0.4 // Smooth curves for position
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    ...chartOptions.scales,
+                    y: { ...chartOptions.scales.y, min: 0, max: 400, reverse: true } // Canvas Y is inverted (0 is top)
+                }
+            }
+        });
+
+        // Chart 2: Velocity
+        const ctxVelocity = document.getElementById('chartVelocity').getContext('2d');
+        const chartVelocity = new Chart(ctxVelocity, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Kecepatan Y',
+                    data: [],
+                    borderColor: '#0EA5E9', // Blue
+                    borderWidth: 2,
+                    tension: 0.1 // Sharper lines for velocity changes
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    ...chartOptions.scales,
+                    y: { ...chartOptions.scales.y, min: -25, max: 25 }
+                }
+            }
+        });
+
+
+        // --- CORE PHYSICS LOOP ---
+        function updatePhysics() {
+            // 1. Apply Gravity (Acceleration)
+            ball.vy += config.gravity;
+
+            // 2. Move Ball (Velocity)
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // 3. Check Edges
+            // Floor
+            if (ball.y + ball.radius > canvas.height) {
+                ball.y = canvas.height - ball.radius;
+                ball.vy *= -config.bounce;
+                
+                // Friction for X (optional realism)
+                ball.vx *= 0.99;
+            }
+            // Walls
+            if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+                ball.vx *= -1;
+                if(ball.x - ball.radius < 0) ball.x = ball.radius;
+                if(ball.x + ball.radius > canvas.width) ball.x = canvas.width - ball.radius;
+            }
+
+            // Update Monitor Text
+            monitorY.innerText = Math.round(ball.y);
+            monitorVel.innerText = ball.vy.toFixed(2);
+        }
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = '#0f172a'; // Slate 900
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Ball
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = ball.color;
+            ctx.fill();
+            
+            // Draw Velocity Vector (Visual Aid)
+            ctx.beginPath();
+            ctx.moveTo(ball.x, ball.y);
+            ctx.lineTo(ball.x + ball.vx * 5, ball.y + ball.vy * 5);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function updateCharts() {
+            frameCount++;
+            
+            // Need to update chart labels and data arrays
+            // For performance, we manipulate the arrays directly and only call update every few frames or strictly manage array length
+            
+            if (frameCount % 3 === 0) { // Update charts every 3rd frame to save CPU
+                const currentLabel = frameCount;
+
+                // Push new data
+                chartHeight.data.labels.push(currentLabel);
+                chartHeight.data.datasets[0].data.push(ball.y);
+
+                chartVelocity.data.labels.push(currentLabel);
+                chartVelocity.data.datasets[0].data.push(ball.vy);
+
+                // Remove old data if limit reached
+                if (chartHeight.data.labels.length > maxDataPoints) {
+                    chartHeight.data.labels.shift();
+                    chartHeight.data.datasets[0].data.shift();
+                    chartVelocity.data.labels.shift();
+                    chartVelocity.data.datasets[0].data.shift();
+                }
+
+                chartHeight.update();
+                chartVelocity.update();
+            }
+        }
+
+        function loop() {
+            if (isPaused) return;
+
+            updatePhysics();
+            draw();
+            updateCharts();
+
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        // Init
+        // Handle Resize for Canvas resolution
+        function resizeSim() {
+            // We keep internal resolution fixed at 600x400 for consistency, 
+            // CSS handles the responsive display size.
+        }
+        window.addEventListener('resize', resizeSim);
+
+        // Start
+        loop();
+
+    </script>
+</body>
+</html>

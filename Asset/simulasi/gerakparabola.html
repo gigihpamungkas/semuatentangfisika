@@ -1,0 +1,227 @@
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+
+<style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f7f6;
+        }
+        #ui-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        label {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        select, input {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #bdc3c7;
+        }
+        #data-display {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            width: 800px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+        .highlight { color: #f1c40f; font-weight: bold; }
+        button {
+            padding: 10px 20px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        button:hover { background-color: #2ecc71; }
+    </style>
+
+
+    <div id="ui-panel">
+        <div class="control-group">
+            <label>Sudut Elevasi (°)</label>
+            <select id="angleSelect">
+                <option value="30">30°</option>
+                <option value="37">37°</option>
+                <option value="45" selected>45°</option>
+                <option value="53">53°</option>
+                <option value="60">60°</option>
+                <option value="90">90°</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>Kec. Awal (km/jam): <span id="v0Label">25</span></label>
+            <input type="range" id="v0Slider" min="0" max="75" value="25">
+        </div>
+
+        <div class="control-group" style="justify-content: center;">
+            <button onclick="launch()">TEMBAK!</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="data-display">
+        <div>H-Max (Tinggi): <span id="hMaxDisplay" class="highlight">0</span> m</div>
+        <div>X-Max (Jarak): <span id="xMaxDisplay" class="highlight">0</span> m</div>
+        <div>Waktu Total: <span id="tDisplay" class="highlight">0</span> s</div>
+    </div>
+
+<script>
+let angle, v0_kmh, v0_ms;
+const g = 9.8;
+let t = 0;
+let isMoving = false;
+let trajectory = [];
+let px, py; // Posisi saat ini
+let scaleFactor = 15; // 1 meter = 15 pixels
+
+function setup() {
+    let canvas = createCanvas(800, 400);
+    canvas.parent('canvas-container');
+}
+
+function draw() {
+    background(240);
+    
+    // Update Slider Label
+    v0_kmh = document.getElementById('v0Slider').value;
+    document.getElementById('v0Label').innerText = v0_kmh;
+    angle = radians(document.getElementById('angleSelect').value);
+    
+    // Konversi km/jam ke m/s
+    v0_ms = v0_kmh * (1000/3600);
+
+    drawGrid();
+    drawCannon(angle);
+
+    if (isMoving) {
+        let vx0 = v0_ms * cos(angle);
+        let vy0 = v0_ms * sin(angle);
+        
+        // Fisika Parabola
+        px = vx0 * t;
+        py = (vy0 * t) - (0.5 * g * t * t);
+
+        if (py >= 0) {
+            trajectory.push({x: px, y: py});
+            t += 0.05;
+        } else {
+            isMoving = false;
+        }
+    }
+
+    drawTrajectory();
+    drawBall();
+    updateInfo();
+}
+
+function drawGrid() {
+    stroke(200);
+    strokeWeight(1);
+    // Sumbu X & Y
+    line(50, height - 50, width, height - 50); // X-axis
+    line(50, 0, 50, height - 50); // Y-axis
+    
+    // Tanda angka (Ticks)
+    fill(100);
+    textSize(10);
+    for(let i = 0; i < 20; i++) {
+        let xPos = 50 + i * 40;
+        line(xPos, height-55, xPos, height-45);
+        text(round(i * 40 / scaleFactor) + "m", xPos - 5, height-30);
+        
+        let yPos = (height - 50) - i * 40;
+        line(45, yPos, 55, yPos);
+        if(i > 0) text(round(i * 40 / scaleFactor) + "m", 20, yPos + 5);
+    }
+}
+
+function drawCannon(a) {
+    push();
+    translate(50, height - 50);
+    rotate(-a);
+    // Body Meriam
+    fill(52, 73, 94);
+    noStroke();
+    rect(0, -10, 40, 20, 5);
+    // Roda
+    fill(0);
+    circle(0, 0, 20);
+    pop();
+}
+
+function drawTrajectory() {
+    stroke(192, 57, 43);
+    strokeWeight(2);
+    drawingContext.setLineDash([5, 5]); // Garis putus-putus
+    noFill();
+    beginShape();
+    trajectory.forEach(p => {
+        vertex(50 + p.x * scaleFactor, (height - 50) - p.y * scaleFactor);
+    });
+    endShape();
+    drawingContext.setLineDash([]); // Reset ke garis solid
+}
+
+function drawBall() {
+    if (trajectory.length > 0) {
+        let last = trajectory[trajectory.length - 1];
+        fill(41, 128, 185);
+        noStroke();
+        circle(50 + last.x * scaleFactor, (height - 50) - last.y * scaleFactor, 12);
+        
+        // Tandai Titik Tertinggi
+        let highest = trajectory.reduce((prev, current) => (prev.y > current.y) ? prev : current);
+        fill(39, 174, 96);
+        circle(50 + highest.x * scaleFactor, (height - 50) - highest.y * scaleFactor, 6);
+    }
+}
+
+function launch() {
+    trajectory = [];
+    t = 0;
+    isMoving = true;
+}
+
+function updateInfo() {
+    let theta = radians(document.getElementById('angleSelect').value);
+    let v = v0_kmh * (1000/3600);
+    
+    let hMax = (v * v * Math.pow(sin(theta), 2)) / (2 * g);
+    let xMax = (v * v * sin(2 * theta)) / g;
+    let tTotal = (2 * v * sin(theta)) / g;
+
+    document.getElementById('hMaxDisplay').innerText = hMax.toFixed(2);
+    document.getElementById('xMaxDisplay').innerText = xMax.toFixed(2);
+    document.getElementById('tDisplay').innerText = tTotal.toFixed(2);
+}
+</script>

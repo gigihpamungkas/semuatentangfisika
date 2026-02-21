@@ -1,99 +1,98 @@
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 
 <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #f4f7f6;
-        }
-        #ui-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 0 0 15px 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        label {
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 5px;
-            color: #2c3e50;
-        }
-        select, input {
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #bdc3c7;
-        }
-        #data-display {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 10px;
-            width: 800px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            text-align: center;
-        }
-        .highlight { color: #f1c40f; font-weight: bold; }
-        button {
-            padding: 10px 20px;
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-        button:hover { background-color: #2ecc71; }
-    </style>
+    body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f4f7f6;
+}
+#ui-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+label {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+select, input {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #bdc3c7;
+}
+#data-display {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 10px;
+    width: 800px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    text-align: center;
+}
+.highlight { color: #f1c40f; font-weight: bold; }
+button {
+    padding: 10px 20px;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+button:hover { background-color: #2ecc71; }
+</style>
 
 
-    <div id="ui-panel">
-        <div class="control-group">
-            <label>Sudut Elevasi (°)</label>
-            <select id="angleSelect">
-                <option value="30">30°</option>
-                <option value="37">37°</option>
-                <option value="45" selected>45°</option>
-                <option value="53">53°</option>
-                <option value="60">60°</option>
-                <option value="90">90°</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label>Kec. Awal (km/jam): <span id="v0Label">25</span></label>
-            <input type="range" id="v0Slider" min="0" max="75" value="25">
-        </div>
-
-        <div class="control-group" style="justify-content: center;">
-            <button onclick="launch()">TEMBAK!</button>
-        </div>
+<div id="ui-panel">
+    <div class="control-group">
+        <label>Sudut Elevasi (°)</label>
+        <select id="angleSelect">
+            <option value="30">30°</option>
+            <option value="37">37°</option>
+            <option value="45" selected>45°</option>
+            <option value="53">53°</option>
+            <option value="60">60°</option>
+            <option value="90">90°</option>
+        </select>
+    </div>
+    
+    <div class="control-group">
+        <label>Kec. Awal (km/jam): <span id="v0Label">25</span></label>
+        <input type="range" id="v0Slider" min="0" max="75" value="25">
     </div>
 
-    <div id="canvas-container"></div>
-
-    <div id="data-display">
-        <div>H-Max (Tinggi): <span id="hMaxDisplay" class="highlight">0</span> m</div>
-        <div>X-Max (Jarak): <span id="xMaxDisplay" class="highlight">0</span> m</div>
-        <div>Waktu Total: <span id="tDisplay" class="highlight">0</span> s</div>
+    <div class="control-group" style="justify-content: center;">
+        <button onclick="launch()">TEMBAK!</button>
     </div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div id="data-display">
+    <div>H-Max (Tinggi): <span id="hMaxDisplay" class="highlight">0</span> m</div>
+    <div>X-Max (Jarak): <span id="xMaxDisplay" class="highlight">0</span> m</div>
+    <div>Waktu Total: <span id="tDisplay" class="highlight">0</span> s</div>
+</div>
 
 <script>
 let angle, v0_kmh, v0_ms;

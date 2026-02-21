@@ -7,4 +7,4 @@ mathjax: true
 nav_order: 1
 ---
 
-<iframe src="Asset/simulasi/gerakparabola.html" width="90%" height="600px" frameborder="0"></iframe>
+<iframe src="Asset/simulasi/gerakparabola.html" width="110%" height="600px" frameborder="0"></iframe>

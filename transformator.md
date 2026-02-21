@@ -2,7 +2,7 @@
 layout: default
 title: transformator
 parent: Kemagnetan        # Nama bapaknya
-grand_parent: Materi # Nama kakeknya (WAJIB ADA)
+grand_parent: Simulasi # Nama kakeknya (WAJIB ADA)
 mathjax: true
 nav_order: 2
 ---

@@ -1,8 +1,7 @@
 ---
 layout: default
 title: gerak parabola
-parent: Kinematika        # Nama bapaknya
-grand_parent: Simulasi # Nama kakeknya (WAJIB ADA)
+parent: Simulasi
 mathjax: true
 nav_order: 1
 ---

@@ -1,10 +1,9 @@
 ---
 layout: default
 title: ggl induksi
-parent: Kemagnetan        # Nama bapaknya
-grand_parent: Simulasi # Nama kakeknya (WAJIB ADA)
+parent: Simulasi       # Nama bapaknya
 mathjax: true
-nav_order: 1
+nav_order: 2
 ---
 
 # GGL Induksi & Hukum Faraday

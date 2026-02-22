@@ -1,0 +1,173 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+<style>
+    body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; }
+    #controls { background: white; padding: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 950px; border-radius: 0 0 10px 10px; }
+    .control-item { display: flex; flex-direction: column; }
+    label { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #333; }
+    input[type=range] { width: 100%; }
+    /* Panel Status diubah menjadi 4 kolom */
+    #status-panel { width: 950px; margin-top: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .card { background: #2c3e50; color: white; padding: 12px; border-radius: 8px; text-align: center; }
+    .val { display: block; font-size: 20px; color: #f1c40f; font-weight: bold; margin-top: 5px; }
+    .btn-group { grid-column: span 3; display: flex; gap: 10px; margin-top: 5px; }
+    button { flex: 1; padding: 12px; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    #btnStart { background: #27ae60; }
+    #btnPause { background: #f39c12; }
+    #btnReset { background: #e74c3c; }
+    button:hover { opacity: 0.8; }
+</style>
+
+
+
+<div id="controls">
+    <div class="control-item">
+        <label>Massa (m): <span id="mVal">5</span> kg</label>
+        <input type="range" id="mSld" min="1" max="20" value="5" step="1">
+    </div>
+    <div class="control-item">
+        <label>Gaya Tarik (F): <span id="fVal">30</span> N</label>
+        <input type="range" id="fSld" min="0" max="100" value="30">
+    </div>
+    <div class="control-item">
+        <label>Sudut Elevasi (θ): <span id="degVal">30</span>°</label>
+        <input type="range" id="degSld" min="0" max="89" value="30">
+    </div>
+    <div class="control-item">
+        <label>Koef. Statik (μs): <span id="usVal">0.5</span></label>
+        <input type="range" id="usSld" min="0" max="1" value="0.5" step="0.05">
+    </div>
+    <div class="control-item">
+        <label>Koef. Kinetik (μk): <span id="ukVal">0.3</span></label>
+        <input type="range" id="ukSld" min="0" max="1" value="0.3" step="0.05">
+    </div>
+    <div class="btn-group">
+        <button id="btnStart" onclick="startSim()">START</button>
+        <button id="btnPause" onclick="pauseSim()">PAUSE</button>
+        <button id="btnReset" onclick="resetSim()">RESET</button>
+    </div>
+</div>
+
+<div id="status-panel">
+    <div class="card">Jarak (s)<span id="distOut" class="val">0.00</span> m</div>
+    <div class="card">Kecepatan (v)<span id="velOut" class="val">0.00</span> m/s</div>
+    <div class="card">Percepatan (a)<span id="accOut" class="val">0.00</span> m/s²</div>
+    <div class="card">Status<span id="stateOut" class="val">DIAM</span></div>
+</div>
+
+<script>
+    let x = 50; 
+    let v = 0;
+    let a = 0;
+    let simState = "IDLE"; 
+    const g = 9.8;
+    const groundY = 250;
+    const pixelsPerMeter = 40; // Skala 1m = 40px
+    const startX = 50;
+
+    function setup() {
+        let cnv = createCanvas(950, 350);
+        cnv.style('border', '2px solid #ddd');
+        cnv.style('margin-top', '10px');
+    }
+
+    function draw() {
+        background(255);
+        
+        // 1. INPUT
+        let m = parseFloat(document.getElementById('mSld').value);
+        let F = parseFloat(document.getElementById('fSld').value);
+        let thetaDeg = parseFloat(document.getElementById('degSld').value);
+        let us = parseFloat(document.getElementById('usSld').value);
+        let uk = parseFloat(document.getElementById('ukSld').value);
+        
+        document.getElementById('mVal').innerText = m;
+        document.getElementById('fVal').innerText = F;
+        document.getElementById('degVal').innerText = thetaDeg;
+        document.getElementById('usVal').innerText = us;
+        document.getElementById('ukVal').innerText = uk;
+
+        let theta = radians(thetaDeg);
+        let Fx = F * cos(theta);
+        let Fy = F * sin(theta);
+        let N = max(0, (m * g) - Fy); 
+        let fs_max = us * N;
+        let fk = uk * N;
+
+        let posisiRelatifMeter = (x - startX) / pixelsPerMeter;
+
+        // 2. LOGIKA GERAK
+        if (simState === "RUNNING") {
+            if (posisiRelatifMeter >= 20) {
+                simState = "IDLE";
+                v = 0; a = 0;
+                x = startX + (20 * pixelsPerMeter);
+                document.getElementById('stateOut').innerText = "FINISH!";
+            } else {
+                if (v === 0 && Fx <= fs_max) {
+                    a = 0;
+                    document.getElementById('stateOut').innerText = "STUCK (STATIK)";
+                } else {
+                    let F_net = Fx - fk;
+                    a = F_net / m;
+                    v += a * (1/60);
+                    if (v < 0) { v = 0; a = 0; } // Berhenti jika F tarik < F gesek kinetik
+                    x += v;
+                    document.getElementById('stateOut').innerText = "BERGERAK";
+                }
+            }
+        } else if (simState === "PAUSED") {
+            document.getElementById('stateOut').innerText = "PAUSE";
+        }
+
+        // 3. VISUALISASI
+        drawFloor();
+        drawBlock(x, groundY, m);
+        let sz = 40 + m * 2;
+        drawForceVector(x + sz, groundY - sz/2, F, theta);
+        
+        // 4. UPDATE DATA PANEL
+        document.getElementById('distOut').innerText = max(0, posisiRelatifMeter).toFixed(2);
+        document.getElementById('velOut').innerText = v.toFixed(2);
+        document.getElementById('accOut').innerText = a.toFixed(2);
+    }
+
+    function drawFloor() {
+        stroke(100); strokeWeight(4);
+        line(0, groundY, width, groundY);
+        strokeWeight(1);
+        for (let i = 0; i < width; i += 20) { line(i, groundY, i - 10, groundY + 10); }
+
+        let finishX = startX + (20 * pixelsPerMeter);
+        stroke(231, 76, 60); strokeWeight(4);
+        line(finishX, groundY - 40, finishX, groundY); 
+        fill(231, 76, 60); noStroke(); textAlign(CENTER);
+        text("20m", finishX, groundY + 35);
+    }
+
+    function drawBlock(bx, by, bm) {
+        fill(127, 140, 141); stroke(44, 62, 80); strokeWeight(2);
+        let sz = 40 + bm * 2;
+        rect(bx, by - sz, sz, sz); // Menempel tepat di groundY
+        fill(255); textAlign(CENTER, CENTER); noStroke();
+        text(bm + "kg", bx + sz/2, by - sz/2);
+    }
+
+    function drawForceVector(vx, vy, vF, vAngle) {
+        if (vF <= 0) return;
+        push(); translate(vx, vy); rotate(-vAngle);
+        stroke(231, 76, 60); strokeWeight(3);
+        let visualLen = vF * 1.5; 
+        line(0, 0, visualLen, 0);
+        line(visualLen, 0, visualLen - 8, -4);
+        line(visualLen, 0, visualLen - 8, 4);
+        pop();
+    }
+
+    function startSim() { simState = "RUNNING"; }
+    function pauseSim() { simState = "PAUSED"; }
+    function resetSim() {
+        x = startX; v = 0; a = 0;
+        simState = "IDLE";
+        document.getElementById('stateOut').innerText = "DIAM";
+    }
+</script>

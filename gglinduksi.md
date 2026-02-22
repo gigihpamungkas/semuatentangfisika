@@ -18,18 +18,18 @@ Eksperimen virtual ini memungkinkan Anda untuk menggerakkan magnet di sekitar ku
 ## Konsep Utama
 Besarnya GGL induksi yang dihasilkan dipengaruhi oleh beberapa faktor sesuai persamaan:
 
-$$\epsilon = -N \frac{\Delta \Phi}{\Delta t}$$
+  \epsilon =-N \frac{\Delta \Phi }{\Delta t}
 
 Berikut adalah rumusnya:
 
-$$\epsilon = -N \frac{\Delta \Phi}{\Delta t}$$
+\epsilon = -N \frac{\Delta \Phi}{\Delta t}
 
-Di mana $\epsilon$ adalah GGL.
+Di mana \epsilon adalah GGL.
 
 Keterangan:
-* **$N$**: Jumlah lilitan kumparan.
-* **$\Delta \Phi$**: Perubahan fluks magnetik (dalam simulasi dipengaruhi oleh Kuat Medan $B$).
-* **$\Delta t$**: Selang waktu (kecepatan gerakan magnet).
+* **N**: Jumlah lilitan kumparan.
+* **\Delta \Phi**: Perubahan fluks magnetik (dalam simulasi dipengaruhi oleh Kuat Medan $B$).
+* **\Delta t**: Selang waktu (kecepatan gerakan magnet).
 
 ## Instruksi Eksperimen
 1.  **Pengaruh Kecepatan:** Gerakkan magnet dengan lambat, lalu bandingkan dengan gerakan cepat. Amati penyimpangan jarum amperemeter.

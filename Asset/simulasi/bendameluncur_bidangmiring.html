@@ -1,0 +1,184 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        .sim-wrapper { width: 100%; max-width: 900px; margin: 0 auto; font-family: sans-serif; background: #fdfdfd; padding: 10px; }
+        #ui-panel { 
+            background: white; padding: 15px; border-radius: 10px; 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 10px;
+        }
+        .control-item { display: flex; flex-direction: column; }
+        label { font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #34495e; }
+        .btn-group { grid-column: 1 / -1; display: flex; gap: 10px; }
+        button { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        #startBtn { background: #27ae60; } #pauseBtn { background: #f39c12; } #resetBtn { background: #e74c3c; }
+        #canvas-holder { width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; background: #fff; }
+        #data-display { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
+        .card { background: #2c3e50; color: white; padding: 10px; border-radius: 8px; text-align: center; }
+        .val { display: block; font-size: 18px; color: #f1c40f; font-weight: bold; }
+    </style>
+
+<div class="sim-wrapper">
+    <div id="ui-panel">
+        <div class="control-item">
+            <label>Massa (m): <span id="mVal">5</span> kg</label>
+            <input type="range" id="mSld" min="1" max="20" value="5">
+        </div>
+        <div class="control-item">
+            <label>Sudut θ (°): <span id="angVal">30</span>°</label>
+            <input type="range" id="angSld" min="15" max="60" value="30">
+        </div>
+        <div class="control-item">
+            <label>Koef. Gesek μ: <span id="muVal">0.3</span></label>
+            <input type="range" id="muSld" min="0" max="1" step="0.05" value="0.3">
+        </div>
+        <div class="btn-group">
+            <button id="startBtn" onclick="simStatus='RUN'">START</button>
+            <button id="pauseBtn" onclick="simStatus='PAUSE'">PAUSE</button>
+            <button id="resetBtn" onclick="resetSim()">RESET</button>
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div id="data-display">
+        <div class="card">Jarak (s)<span id="sOut" class="val">0.00</span> m</div>
+        <div class="card">Kec. (v)<span id="vOut" class="val">0.00</span> m/s</div>
+        <div class="card">Acc. (a)<span id="aOut" class="val">0.00</span> m/s²</div>
+        <div class="card">Status<span id="stOut" class="val">DIAM</span></div>
+    </div>
+</div>
+
+<script>
+let m, theta, mu, simStatus = "IDLE";
+let posOnIncline = 0; // Posisi balok di sepanjang sisi miring (pixel)
+let vel = 0, acc = 0;
+const g = 9.8, scale = 50;
+const startX = 80, startY = 100, groundY = 350;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let cnv = createCanvas(container.offsetWidth, 420);
+    cnv.parent('canvas-holder');
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 420);
+}
+
+function draw() {
+    background(255);
+    updateInputs();
+
+    let rad = radians(theta);
+    let h = groundY - startY; // Tinggi segitiga
+    let inclineLength = h / sin(rad); // Panjang lintasan miring
+    
+    // Perhitungan Fisika
+    let F_parallel = m * g * sin(rad);
+    let N = m * g * cos(rad);
+    let f_max = mu * N;
+
+    let sz = 30 + m; // Ukuran balok
+
+    if (simStatus === "RUN") {
+        // Berhenti jika balok sudah menyentuh ujung bawah segitiga (lantai)
+        if (posOnIncline < inclineLength - sz) {
+            if (F_parallel > f_max || vel > 0.01) {
+                acc = (F_parallel - f_max) / m;
+                vel += acc * (1/60);
+                posOnIncline += vel * scale * (1/60);
+                document.getElementById('stOut').innerText = "MELUNCUR";
+            } else {
+                acc = 0; vel = 0;
+                document.getElementById('stOut').innerText = "STATIK";
+            }
+        } else {
+            // LOCK POSISI DI LANTAI
+            posOnIncline = inclineLength - sz;
+            acc = 0; vel = 0;
+            simStatus = "FINISHED";
+            document.getElementById('stOut').innerText = "FINISH (LANTAI)";
+        }
+    }
+
+    drawSim(rad, posOnIncline, sz);
+    updateData();
+}
+
+function updateInputs() {
+    m = parseFloat(document.getElementById('mSld').value);
+    theta = parseFloat(document.getElementById('angSld').value);
+    mu = parseFloat(document.getElementById('muSld').value);
+    document.getElementById('mVal').innerText = m;
+    document.getElementById('angVal').innerText = theta;
+    document.getElementById('muVal').innerText = mu;
+}
+
+function drawSim(r, p, sz) {
+    // 1. Lantai Dasar
+    stroke(150); strokeWeight(2); line(0, groundY, width, groundY);
+    for(let i=0; i<width; i+=20) line(i, groundY, i-10, groundY+10);
+
+    // 2. Segitiga Bidang Miring
+    let endX = startX + (groundY - startY) / tan(r);
+    fill(245); stroke(100); strokeWeight(3);
+    triangle(startX, startY, startX, groundY, endX, groundY);
+    
+    // Keterangan Sudut
+    fill(50); noStroke(); textAlign(LEFT); textSize(12);
+    text(theta + "°", startX + 45, groundY - 10);
+    noFill(); stroke(100); strokeWeight(1);
+    arc(startX, groundY, 70, 70, -r, 0);
+
+    // 3. Balok dan Gaya (Gunakan transformasi Push/Pop)
+    push();
+    translate(startX, startY);
+    rotate(r);
+    
+    // Gambar Balok (Posisi p dihitung dari puncak startX, startY)
+    fill(52, 152, 219, 220); stroke(41, 128, 185); strokeWeight(2);
+    rect(p, -sz, sz, sz);
+    
+    // Teks Massa
+    fill(255); noStroke(); textAlign(CENTER, CENTER);
+    text(m + "kg", p + sz/2, -sz/2);
+
+    // Diagram Gaya Bebas (FBD)
+    let cx = p + sz/2;
+    let cy = -sz/2;
+    
+    // Vektor N & f
+    drawArrow(cx, cy, 0, -50, color(46, 204, 113), "N"); // Normal
+    drawArrow(cx, cy, -40, 0, color(231, 76, 60), "f");  // Gesek
+    drawArrow(cx, cy, 40, 0, color(241, 194, 15), "w sin θ"); // Komponen berat
+    pop();
+
+    // Vektor W (Tegak Lurus Bumi)
+    let worldX = startX + (p + sz/2) * cos(r) + (sz/2) * sin(r);
+    let worldY = startY + (p + sz/2) * sin(r) - (sz/2) * cos(r);
+    drawArrow(worldX, worldY, 0, 60, color(50), "W=mg");
+}
+
+function drawArrow(x, y, dx, dy, c, txt) {
+    stroke(c); fill(c); strokeWeight(2);
+    line(x, y, x + dx, y + dy);
+    let ang = atan2(dy, dx);
+    push();
+    translate(x + dx, y + dy); rotate(ang);
+    triangle(0, 0, -6, -3, -6, 3);
+    pop();
+    noStroke(); textSize(11); text(txt, x + dx + 5, y + dy + 5);
+}
+
+function updateData() {
+    document.getElementById('aOut').innerText = acc.toFixed(2);
+    document.getElementById('vOut').innerText = vel.toFixed(2);
+    document.getElementById('sOut').innerText = (posOnIncline/scale).toFixed(2);
+}
+
+function resetSim() {
+    simStatus = "IDLE"; posOnIncline = 0; vel = 0; acc = 0;
+    document.getElementById('stOut').innerText = "DIAM";
+}
+</script>

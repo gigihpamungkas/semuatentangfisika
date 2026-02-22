@@ -1,191 +1,193 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        .simulation-wrapper {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #ecf0f1;
+            padding: 10px;
+            box-sizing: border-box;
+        }
 
-<style>
-  body {
-  margin: 0;
-  padding: 20px;
-  background-color: #ecf0f1;
-  font-family: 'Segoe UI', sans-serif;
-}
+        #ui-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
 
-#app-container {
-  max-width: 900px;
-  margin: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
 
-#ui-panel {
-  background: white;
-  padding: 25px;
-  border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
+        .slider-label {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #34495e;
+        }
 
-h1 {
-  margin-top: 0;
-  font-size: 1.6rem;
-  color: #2c3e50;
-  border-bottom: 2px solid #3498db;
-  padding-bottom: 10px;
-}
+        #canvas-holder {
+            width: 100%;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
 
-.control-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 15px;
-}
+        input[type=range] { width: 100%; }
+    </style>
 
-.slider-label {
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #34495e;
-}
-
-canvas {
-  display: block;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-}
-</style>
-
-<div id="app-container">
+<div class="simulation-wrapper">
     <div id="ui-panel">
-      <h1>Eksperimen Transformator</h1>
-      <div class="control-grid">
-        <div class="control-group">
-          <div class="slider-label">Jumlah Lilitan Primer (Np): <span id="np-val">500</span></div>
-          <div id="np-slider"></div>
+        <h1 style="margin-top:0; font-size:1.4rem; color:#2c3e50; border-bottom:2px solid #3498db; padding-bottom:10px;">
+            Eksperimen Transformator Pro
+        </h1>
+        <div class="control-grid">
+            <div class="control-group">
+                <div class="slider-label">Lilitan Primer (Np): <span id="np-val" style="color:#e67e22;">500</span></div>
+                <div id="np-slider"></div>
+            </div>
+            <div class="control-group">
+                <div class="slider-label">Lilitan Sekunder (Ns): <span id="ns-val" style="color:#3498db;">500</span></div>
+                <div id="ns-slider"></div>
+            </div>
+            <div class="control-group">
+                <div class="slider-label">Tegangan Sumber (Vp): <span id="vp-val" style="color:#27ae60;">10</span> V</div>
+                <div id="vp-slider"></div>
+            </div>
         </div>
-        <div class="control-group">
-          <div class="slider-label">Jumlah Lilitan Sekunder (Ns): <span id="ns-val">500</span></div>
-          <div id="ns-slider"></div>
-        </div>
-        <div class="control-group">
-          <div class="slider-label">Tegangan Sumber (Vp): <span id="vp-val">10</span> V</div>
-          <div id="vp-slider"></div>
-        </div>
-      </div>
     </div>
     <div id="canvas-holder"></div>
-  </div>
+</div>
 
 <script>
 let npSlider, nsSlider, vpSlider;
 let time = 0;
+let centerX, coreWidth, coreHeight;
 
 function setup() {
-  let canvas = createCanvas(850, 480);
-  canvas.parent('canvas-holder');
+    let container = document.getElementById('canvas-holder');
+    let cnv = createCanvas(container.offsetWidth, 450);
+    cnv.parent('canvas-holder');
 
-  npSlider = createSlider(100, 1000, 500, 100);
-  npSlider.parent('np-slider');
-  npSlider.style('width', '100%');
+    npSlider = createSlider(100, 1000, 500, 100);
+    npSlider.parent('np-slider');
+    npSlider.style('width', '100%');
 
-  nsSlider = createSlider(100, 1000, 500, 100);
-  nsSlider.parent('ns-slider');
-  nsSlider.style('width', '100%');
+    nsSlider = createSlider(100, 1000, 500, 100);
+    nsSlider.parent('ns-slider');
+    nsSlider.style('width', '100%');
 
-  vpSlider = createSlider(0, 20, 10, 1);
-  vpSlider.parent('vp-slider');
-  vpSlider.style('width', '100%');
+    vpSlider = createSlider(0, 20, 10, 1);
+    vpSlider.parent('vp-slider');
+    vpSlider.style('width', '100%');
+    
+    updateLayout();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 450);
+    updateLayout();
+}
+
+function updateLayout() {
+    centerX = width / 2;
+    coreWidth = min(width * 0.3, 200); // Inti besi mengecil di layar kecil
+    coreHeight = 260;
 }
 
 function draw() {
-  background(255);
-  
-  let Np = npSlider.value();
-  let Ns = nsSlider.value();
-  let Vp_rms = vpSlider.value();
-  let Vs_rms = (Vp_rms * Ns / Np);
+    background(255);
+    
+    let Np = npSlider.value();
+    let Ns = nsSlider.value();
+    let Vp_rms = vpSlider.value();
+    let Vs_rms = (Vp_rms * Ns / Np);
 
-  // Update HTML Labels
-  document.getElementById('np-val').innerText = Np;
-  document.getElementById('ns-val').innerText = Ns;
-  document.getElementById('vp-val').innerText = Vp_rms;
+    document.getElementById('np-val').innerText = Np;
+    document.getElementById('ns-val').innerText = Ns;
+    document.getElementById('vp-val').innerText = Vp_rms;
 
-  let AC = sin(time);
+    let AC = sin(time);
 
-  // --- DRAWING CIRCUIT WIRES ---
-  stroke(50);
-  strokeWeight(3);
-  noFill();
-  // Kabel Primer (Kiri)
-  line(125, 200, 325, 200);
-  line(125, 300, 325, 300);
-  // Kabel Sekunder (Kanan)
-  line(525, 200, 725, 200);
-  line(525, 300, 725, 300);
+    // --- POSISI RELATIF ---
+    let coreX = centerX - coreWidth/2;
+    let meterOffset = width < 500 ? width * 0.4 : 250;
 
-  // --- DRAW TRANSFORMER CORE ---
-  fill(180); stroke(100); strokeWeight(2);
-  rect(325, 120, 200, 260, 10); // Core utama
-  fill(255); 
-  rect(365, 160, 120, 180, 5);  // Lubang tengah
+    // --- DRAWING CIRCUIT WIRES ---
+    stroke(50); strokeWeight(3); noFill();
+    // Primer (Kiri)
+    line(centerX - meterOffset, 200, coreX, 200);
+    line(centerX - meterOffset, 300, coreX, 300);
+    // Sekunder (Kanan)
+    line(coreX + coreWidth, 200, centerX + meterOffset, 200);
+    line(coreX + coreWidth, 300, centerX + meterOffset, 300);
 
-  // --- DRAW FLUX ANIMATION ---
-  drawFlux(AC, Vp_rms);
+    // --- DRAW TRANSFORMER CORE ---
+    fill(180); stroke(100); strokeWeight(2);
+    rect(coreX, 120, coreWidth, coreHeight, 10); 
+    fill(255); 
+    let holeW = coreWidth * 0.6;
+    rect(centerX - holeW/2, 160, holeW, 180, 5);  
 
-  // --- DRAW COILS ---
-  drawCoil(345, 160, Np/10, AC * Vp_rms, "PRIMER");
-  drawCoil(505, 160, Ns/10, AC * Vs_rms, "SEKUNDER");
+    // --- DRAW FLUX ANIMATION ---
+    drawFlux(centerX, AC, Vp_rms, coreWidth, holeW);
 
-  // --- DRAW VOLTMETERS ---
-  drawMeter(125, 250, Vp_rms, "VOLTMETER Vp");
-  drawMeter(725, 250, Vs_rms, "VOLTMETER Vs");
+    // --- DRAW COILS ---
+    drawCoil(coreX + 20, 160, Np/10, "PRIMER", coreWidth);
+    drawCoil(coreX + coreWidth - 20, 160, Ns/10, "SEKUNDER", coreWidth);
 
-  time += 0.1;
+    // --- DRAW VOLTMETERS ---
+    drawMeter(centerX - meterOffset, 250, Vp_rms, "VOLTMETER Vp");
+    drawMeter(centerX + meterOffset, 250, Vs_rms, "VOLTMETER Vs");
+
+    time += 0.1;
 }
 
-function drawFlux(factor, intensity) {
-  push();
-  let fluxAlpha = map(intensity, 0, 20, 0, 200);
-  stroke(0, 100, 255, fluxAlpha * abs(factor));
-  strokeWeight(map(intensity, 0, 20, 0, 8));
-  noFill();
-  rect(345, 140, 160, 220, 10);
-  pop();
+function drawFlux(cx, factor, intensity, cw, hw) {
+    push();
+    let fluxAlpha = map(intensity, 0, 20, 0, 200);
+    stroke(0, 100, 255, fluxAlpha * abs(factor));
+    strokeWeight(map(intensity, 0, 20, 0, 6));
+    noFill();
+    // Fluks mengikuti ukuran core
+    rectMode(CENTER);
+    rect(cx, 250, (cw + hw)/2, 220, 10);
+    pop();
 }
 
-function drawCoil(x, y, loops, instV, label) {
-  push();
-  stroke(184, 115, 51);
-  strokeWeight(2.5);
-  for(let i=0; i<loops; i++) {
-    let yPos = y + (i * (180/loops));
-    ellipse(x, yPos, 50, 12);
-  }
-  fill(0); noStroke(); textSize(12); textAlign(CENTER);
-  text(label, x, y - 20);
-  pop();
+function drawCoil(x, y, loops, label, cw) {
+    push();
+    stroke(184, 115, 51);
+    strokeWeight(2.5);
+    let coilW = min(cw * 0.25, 50);
+    for(let i=0; i<loops; i++) {
+        let yPos = y + (i * (180/loops));
+        ellipse(x, yPos, coilW, 12);
+    }
+    fill(0); noStroke(); textSize(10); textAlign(CENTER);
+    text(label, x, y - 20);
+    pop();
 }
 
 function drawMeter(x, y, value, label) {
-  push();
-  translate(x, y);
-  
-  // Outer Case
-  fill(44, 62, 80); stroke(0); strokeWeight(2);
-  rectMode(CENTER);
-  rect(0, 0, 140, 100, 10);
-  
-  // Digital Screen
-  fill(20, 30, 20);
-  rect(0, 10, 100, 40, 5);
-  
-  // Value
-  fill(100, 255, 100);
-  noStroke();
-  textAlign(CENTER, CENTER);
-  textSize(22);
-  text(value.toFixed(1) + " V", 0, 10);
-  
-  // Label
-  fill(255);
-  textSize(10);
-  text(label, 0, -35);
-  pop();
+    push();
+    translate(x, y);
+    let s = width < 600 ? 0.7 : 1.0; 
+    scale(s);
+    
+    fill(44, 62, 80); stroke(0); strokeWeight(2); rectMode(CENTER);
+    rect(0, 0, 130, 90, 10);
+    fill(20, 30, 20); rect(0, 10, 90, 35, 5);
+    fill(100, 255, 100); noStroke(); textAlign(CENTER, CENTER);
+    textSize(18); text(value.toFixed(1) + " V", 0, 10);
+    fill(255); textSize(9); text(label, 0, -35);
+    pop();
 }
 </script>

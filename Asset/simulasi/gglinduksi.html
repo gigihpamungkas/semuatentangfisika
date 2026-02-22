@@ -1,218 +1,215 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        .simulation-wrapper {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f7f6;
+            padding: 10px;
+            box-sizing: border-box;
+        }
 
-<style>
-  body {
-  margin: 0;
-  padding: 20px;
-  background-color: #f0f2f5;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+        #ui-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+        }
 
-#app-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
+        .slider-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
 
-#ui-panel {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 800px;
-}
+        .slider-label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
 
-h1 {
-  margin-top: 0;
-  color: #2c3e50;
-  font-size: 1.5rem;
-}
+        #canvas-holder {
+            width: 100%;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            overflow: hidden;
+            touch-action: none; /* Penting untuk interaksi di HP */
+        }
 
-#slider-label {
-  font-weight: bold;
-  margin-bottom: 10px;
-}
+        button {
+            margin-top: 15px;
+            width: 100%;
+            padding: 10px;
+            cursor: pointer;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+    </style>
 
-canvas {
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-}
-</style>
-
-<div id="app-container">
-  <div id="ui-panel">
-    <h1>Eksperimen Hukum Faraday Pro</h1>
-    
-    <div style="display: flex; gap: 30px; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 200px;">
-        <div class="slider-label">
-          Jumlah Lilitan (N): <span id="n-value" style="color: #e67e22; font-weight: bold;">20</span>
+<div class="simulation-wrapper">
+    <div id="ui-panel">
+        <h2 style="font-size: 1.2rem; color: #2c3e50; margin-top: 0;">Eksperimen Hukum Faraday Pro</h2>
+        
+        <div class="slider-container">
+            <div>
+                <div class="slider-label">Lilitan (N): <span id="n-value" style="color: #e67e22;">20</span></div>
+                <div id="n-slider-holder"></div>
+            </div>
+            <div>
+                <div class="slider-label">Medan (B): <span id="b-value" style="color: #3498db;">1.5</span> T</div>
+                <div id="b-slider-holder"></div>
+            </div>
         </div>
-        <div id="n-slider-holder"></div>
-      </div>
-      
-      <div style="flex: 1; min-width: 200px;">
-        <div class="slider-label">
-          Kuat Medan (B): <span id="b-value" style="color: #3498db; font-weight: bold;">1.5</span> Tesla
-        </div>
-        <div id="b-slider-holder"></div>
-      </div>
+
+        <button id="reset-btn">RESET EKSPERIMEN</button>
     </div>
-
-    <button id="reset-btn" style="margin-top: 15px; padding: 8px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold;">Reset Eksperimen</button>
-  </div>
-  
-  <div id="canvas-holder"></div>
+    
+    <div id="canvas-holder"></div>
 </div>
 
 <script>
 let magnetX, prevMagnetX, current = 0;
 let nSlider, bSlider;
+let canvas;
 
 function setup() {
-  let canvas = createCanvas(800, 450);
-  canvas.parent('canvas-holder');
-  
-  magnetX = 150;
-  prevMagnetX = 150;
+    let container = document.getElementById('canvas-holder');
+    canvas = createCanvas(container.offsetWidth, 400);
+    canvas.parent('canvas-holder');
+    
+    magnetX = width * 0.2;
+    prevMagnetX = magnetX;
 
-  // Inisialisasi Slider
-  nSlider = createSlider(1, 100, 20, 1);
-  nSlider.parent('n-slider-holder');
-  nSlider.style('width', '100%');
+    nSlider = createSlider(1, 100, 20, 1);
+    nSlider.parent('n-slider-holder');
+    nSlider.style('width', '100%');
 
-  bSlider = createSlider(0.1, 5.0, 1.5, 0.1);
-  bSlider.parent('b-slider-holder');
-  bSlider.style('width', '100%');
+    bSlider = createSlider(0.1, 5.0, 1.5, 0.1);
+    bSlider.parent('b-slider-holder');
+    bSlider.style('width', '100%');
 
-  // Logika Tombol Reset
-  document.getElementById('reset-btn').addEventListener('click', () => {
-    nSlider.value(20);
-    bSlider.value(1.5);
-    magnetX = 150;
-    prevMagnetX = 150;
-  });
+    document.getElementById('reset-btn').addEventListener('click', () => {
+        nSlider.value(20);
+        bSlider.value(1.5);
+        magnetX = width * 0.2;
+        prevMagnetX = magnetX;
+    });
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 400);
 }
 
 function draw() {
-  background(255);
-  
-  // UPDATE ANGKA DI UI
-  document.getElementById('n-value').innerText = nSlider.value();
-  document.getElementById('b-value').innerText = bSlider.value().toFixed(1);
+    background(255);
+    
+    document.getElementById('n-value').innerText = nSlider.value();
+    document.getElementById('b-value').innerText = bSlider.value().toFixed(1);
 
-  // LOGIKA FISIKA
-  magnetX = lerp(prevMagnetX, mouseX, 0.2); // Membuat pergerakan magnet lebih smooth
-  magnetX = constrain(magnetX, 50, 750);
-  
-  let velocity = magnetX - prevMagnetX;
-  let nTurns = nSlider.value();
-  let bField = bSlider.value();
-  
-  let distanceToCoil = abs(magnetX - 400);
-  if (distanceToCoil < 200) {
-    // Rumus epsilon = -N * (dPhi/dt). 
-    // Faktor 0.04 disesuaikan agar skala Amperemeter tetap masuk akal
-    current = velocity * nTurns * bField * exp(-distanceToCoil * 0.04) * 0.08;
-  } else {
-    current = 0;
-  }
+    // LOGIKA FISIKA (Gunakan width sebagai referensi)
+    if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+        magnetX = lerp(prevMagnetX, mouseX, 0.2);
+    }
+    magnetX = constrain(magnetX, 50, width - 50);
+    
+    let velocity = magnetX - prevMagnetX;
+    let nTurns = nSlider.value();
+    let bField = bSlider.value();
+    
+    let centerX = width / 2;
+    let distanceToCoil = abs(magnetX - centerX);
+    
+    if (distanceToCoil < width * 0.25) {
+        // Skala induksi GGL: ε = -N * dΦ/dt
+        current = velocity * nTurns * bField * exp(-distanceToCoil * 0.04) * 0.08;
+    } else {
+        current = lerp(current, 0, 0.1);
+    }
 
-  // VISUALISASI
-  drawMagneticField(magnetX - 20, height/2, bField);
-  drawCoil(400, height/2, nTurns, current);
-  drawMagnet(magnetX, height/2);
-  drawAmperemeter(680, 120, current);
-  
-  prevMagnetX = magnetX;
+    // VISUALISASI RESPONSIF
+    drawMagneticField(magnetX - 20, height/2, bField);
+    drawCoil(centerX, height/2, nTurns, current);
+    drawMagnet(magnetX, height/2);
+    
+    // Amperemeter diletakkan secara relatif di kanan atas
+    drawAmperemeter(width - 100, 100, current);
+    
+    prevMagnetX = magnetX;
 }
 
-// --- FUNGSI DRAWING (Sama seperti sebelumnya dengan sedikit polesan) ---
-
 function drawMagnet(x, y) {
-  rectMode(CENTER);
-  noStroke();
-  fill(0, 50, 200); rect(x - 45, y, 40, 50, 5); // South
-  fill(220, 20, 60); rect(x - 5, y, 40, 50, 5);  // North
-  fill(255); textSize(16); textAlign(CENTER, CENTER);
-  text("S", x - 45, y); text("N", x - 5, y);
+    rectMode(CENTER);
+    noStroke();
+    fill(0, 50, 200); rect(x - 20, y, 40, 50, 5); // South
+    fill(220, 20, 60); rect(x + 20, y, 40, 50, 5);  // North
+    fill(255); textSize(14); textAlign(CENTER, CENTER);
+    text("S", x - 20, y); text("N", x + 20, y);
 }
 
 function drawCoil(x, y, n, cur) {
-  stroke(184, 115, 51);
-  strokeWeight(2 + n/50); // Kawat menebal jika lilitan banyak
-  noFill();
-  // Kita batasi visualisasi lilitan agar tidak menumpuk (max 15 visual lilitan)
-  let visualTurns = min(n, 15); 
-  for (let i = 0; i < visualTurns; i++) {
-    let xOff = i * 10 - (visualTurns * 5);
-    ellipse(x + xOff, y, 50, 150);
-    if (abs(cur) > 1) {
-      drawArrow(x + xOff, y - 75, cur > 0 ? "UP" : "DOWN");
+    stroke(184, 115, 51);
+    strokeWeight(2 + n/50);
+    noFill();
+    let visualTurns = min(n, 12); 
+    for (let i = 0; i < visualTurns; i++) {
+        let xOff = i * 8 - (visualTurns * 4);
+        ellipse(x + xOff, y, 40, 120);
+        if (abs(cur) > 0.5) {
+            drawArrow(x + xOff, y - 65, cur > 0 ? "UP" : "DOWN");
+        }
     }
-  }
 }
 
 function drawArrow(x, y, dir) {
-  push();
-  stroke(46, 204, 113); fill(46, 204, 113);
-  translate(x, y);
-  if (dir === "DOWN") rotate(PI);
-  line(0, -10, 0, 10);
-  triangle(-5, -5, 5, -5, 0, -15);
-  pop();
+    push();
+    stroke(46, 204, 113); fill(46, 204, 113);
+    translate(x, y);
+    if (dir === "DOWN") rotate(PI);
+    line(0, -8, 0, 8);
+    triangle(-4, -4, 4, -4, 0, -12);
+    pop();
 }
 
 function drawMagneticField(x, y, strength) {
-  noFill();
-  let alpha = map(strength, 0.1, 5.0, 10, 150);
-  stroke(0, 100, 255, alpha);
-  strokeWeight(strength); 
-  for (let i = 1; i <= 4; i++) {
-    ellipse(x, y, 80 * i, 30 * i);
-  }
+    noFill();
+    let alpha = map(strength, 0.1, 5.0, 10, 100);
+    stroke(0, 100, 255, alpha);
+    strokeWeight(strength); 
+    for (let i = 1; i <= 3; i++) {
+        ellipse(x, y, 60 * i, 25 * i);
+    }
 }
 
 function drawAmperemeter(x, y, val) {
-  push();
-  translate(x, y);
-  fill(245); stroke(50); strokeWeight(2);
-  rect(0, 0, 180, 160, 10);
-  
-  // Layar Digital Arus
-  fill(20, 40, 20); rect(0, 80, 110, 30, 5);
-  fill(100, 255, 100); noStroke();
-  textAlign(CENTER, CENTER); textSize(16);
-  text(val.toFixed(2) + " mA", 0, 80);
-  
-  // Skala
-  noFill(); stroke(100); strokeWeight(1);
-  arc(0, 30, 120, 120, PI, TWO_PI);
-  
-  // Jarum dengan pembatasan (Clamp) agar tidak berputar 360 derajat
-  let angle = map(constrain(val, -150, 150), -150, 150, -HALF_PI, HALF_PI);
-  push();
-  translate(0, 30); rotate(angle);
-  stroke(255, 0, 0); strokeWeight(3);
-  line(0, 0, 0, -55);
-  pop();
-  
-  fill(50); textSize(12); text("AMPEREMETER", 0, -70);
-  pop();
+    push();
+    translate(x, y);
+    // Skala Amperemeter otomatis mengecil jika layar sempit
+    let s = width < 500 ? 0.7 : 1.0; 
+    scale(s);
+    
+    fill(245); stroke(50); strokeWeight(2);
+    rect(0, 0, 150, 130, 10);
+    fill(20, 40, 20); rect(0, 45, 90, 25, 5);
+    fill(100, 255, 100); noStroke();
+    textAlign(CENTER, CENTER); textSize(14);
+    text(val.toFixed(2) + " mA", 0, 45);
+    
+    noFill(); stroke(100); arc(0, 10, 100, 100, PI, TWO_PI);
+    let angle = map(constrain(val, -100, 100), -100, 100, -HALF_PI, HALF_PI);
+    push();
+    translate(0, 10); rotate(angle);
+    stroke(255, 0, 0); strokeWeight(2);
+    line(0, 0, 0, -45);
+    pop();
+    fill(50); textSize(10); text("AMPEREMETER", 0, -50);
+    pop();
 }
-</script>
-
-<script>
-  window.MathJax = {
-    tex: {
-      inlineMath: [['$', '$'], ['\\(', '\\)']],
-      displayMath: [['$$', '$$'], ['\\[', '\\]']],
-      processEscapes: true
-    }
-  };
-</script>
-<script type="text/javascript" id="MathJax-script" async
-  src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js">
 </script>

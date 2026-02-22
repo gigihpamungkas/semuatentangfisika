@@ -160,20 +160,39 @@ function draw() {
 }
 
 function drawGrid() {
-    stroke(220);
-    line(50, height - 50, width, height - 50); // X-axis
-    line(50, 0, 50, height - 50); // Y-axis
+    stroke(220); // Warna garis kisi (abu-abu muda)
+    strokeWeight(1);
     
-    fill(150);
+    // 1. Gambar Garis Sumbu Utama
+    line(50, height - 50, width, height - 50); // Sumbu X (Horizontal)
+    line(50, 0, 50, height - 50);              // Sumbu Y (Vertikal)
+    
+    fill(120);
     textSize(10);
-    textAlign(CENTER);
+    textAlign(CENTER, CENTER);
     
-    // Ticks Sumbu X
-    for(let i = 0; i <= 10; i++) {
+    // 2. Angka & Ticks Sumbu X (Jarak Horizontal)
+    // Kita buat loop setiap 5 meter
+    for(let i = 0; i <= 20; i++) {
         let xPos = 50 + i * (5 * scaleFactor);
-        if (xPos < width) {
-            line(xPos, height-55, xPos, height-45);
+        if (xPos <= width) {
+            stroke(220);
+            line(xPos, height-55, xPos, height-45); // Garis kecil (ticks)
+            noStroke();
             text((i*5) + "m", xPos, height-30);
+        }
+    }
+
+    // 3. Angka & Ticks Sumbu Y (Ketinggian Vertikal) - MUNCULKAN KEMBALI
+    textAlign(RIGHT, CENTER);
+    for(let j = 0; j <= 10; j++) {
+        let yPos = (height - 50) - j * (5 * scaleFactor);
+        if (yPos >= 0) {
+            stroke(220);
+            line(45, yPos, 55, yPos); // Garis kecil (ticks) sumbu Y
+            noStroke();
+            // Berikan jarak 10 pixel ke kiri dari sumbu agar tidak tumpang tindih
+            text((j*5) + "m", 40, yPos);
         }
     }
 }

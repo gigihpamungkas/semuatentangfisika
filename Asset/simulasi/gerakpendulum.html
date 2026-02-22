@@ -1,0 +1,178 @@
+    <title>Simulasi Pendulum Assyifa - Energy Data</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        .sim-wrapper { width: 100%; max-width: 900px; margin: 0 auto; font-family: sans-serif; background: #f8f9fa; padding: 15px; border-radius: 12px; }
+        #ui-panel { 
+            background: white; padding: 20px; border-radius: 10px; 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 10px;
+        }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; grid-column: 1 / -1; background: #f1f3f5; padding: 12px; border-radius: 8px; font-size: 12px; }
+        label { font-weight: bold; color: #2c3e50; font-size: 12px; }
+        .btn-group { grid-column: 1 / -1; display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
+        #startBtn { background: #27ae60; } #pauseBtn { background: #f39c12; } #resetBtn { background: #e74c3c; }
+        #canvas-holder { width: 100%; border-radius: 10px; background: white; border: 1px solid #ddd; overflow: hidden; }
+    </style>
+
+<div class="sim-wrapper">
+    <div id="ui-panel">
+        <div class="control-item">
+            <label>Panjang Tali (L): <span id="lVal">10</span> m</label>
+            <input type="range" id="lSld" min="2" max="20" step="0.5" value="10">
+        </div>
+        <div class="control-item">
+            <label>Sudut Maks (θ₀): <span id="angVal">45</span>°</label>
+            <input type="range" id="angSld" min="5" max="90" value="45">
+        </div>
+        <div class="control-item">
+            <label>Kecepatan Animasi: <span id="speedVal">1</span>x</label>
+            <input type="range" id="speedSld" min="0.1" max="3" step="0.1" value="1">
+        </div>
+
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="showForces" checked> Gaya (T & mg)</label>
+            <label><input type="checkbox" id="showNet"> Gaya Netto (F_net)</label>
+            <label><input type="checkbox" id="showAcc"> Percepatan (a_r & a_t)</label>
+            <label><input type="checkbox" id="showEnergy" checked> Grafik & Data Energi</label>
+        </div>
+
+        <div class="btn-group">
+            <button id="startBtn" onclick="startSim()">START</button>
+            <button id="pauseBtn" onclick="pauseSim()">PAUSE</button>
+            <button id="resetBtn" onclick="resetSim()">RESET</button>
+        </div>
+    </div>
+    <div id="canvas-holder"></div>
+</div>
+
+<script>
+let L, thetaMax, animSpeed;
+let angle, aVel = 0, aAcc = 0;
+let isRunning = false;
+const g = 10; 
+let origin;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let cnv = createCanvas(container.offsetWidth, 550);
+    cnv.parent('canvas-holder');
+    origin = createVector(width / 2, 60);
+    resetSim();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 550);
+    origin.x = width / 2;
+}
+
+function draw() {
+    background(252);
+    readInputs();
+
+    // Atap/Plafon
+    fill(100); noStroke();
+    rect(origin.x - 100, origin.y - 20, 200, 20);
+    fill(50); ellipse(origin.x, origin.y, 12, 12);
+
+    if (isRunning) {
+        let dt = (1/60) * animSpeed;
+        aAcc = (-g / L) * sin(angle);
+        aVel += aAcc * dt;
+        angle += aVel * dt;
+    }
+
+    let visualL = L * 15;
+    let x = visualL * sin(angle);
+    let y = visualL * cos(angle);
+    let bob = createVector(origin.x + x, origin.y + y);
+
+    stroke(80); strokeWeight(2.5); 
+    line(origin.x, origin.y, bob.x, bob.y);
+
+    fill(231, 76, 60); stroke(192, 57, 43); strokeWeight(1.5);
+    ellipse(bob.x, bob.y, 34, 34);
+
+    // Vektor Visualisasi
+    if (document.getElementById('showForces').checked) {
+        drawArrow(bob.x, bob.y, 0, 50, color(231, 76, 60), "mg"); 
+        let ten = 50 * cos(angle) + (abs(aVel) * 10);
+        drawArrow(bob.x, bob.y, -ten*sin(angle), -ten*cos(angle), color(46, 204, 113), "T");
+    }
+    if (document.getElementById('showNet').checked) {
+        let net = 50 * sin(angle);
+        drawArrow(bob.x, bob.y, -net*cos(angle), net*sin(angle), color(52, 152, 219), "F_net");
+    }
+    if (document.getElementById('showAcc').checked) {
+        let ar = (aVel * aVel * L) * 2;
+        drawArrow(bob.x, bob.y, -ar*sin(angle), -ar*cos(angle), color(155, 89, 182), "a_r");
+        let at = abs(aAcc * L) * 5;
+        drawArrow(bob.x, bob.y, at*cos(angle)*Math.sign(aAcc), -at*sin(angle)*Math.sign(aAcc), color(243, 156, 18), "a_t");
+    }
+
+    if (document.getElementById('showEnergy').checked) drawEnergy(L, angle, thetaMax);
+}
+
+function readInputs() {
+    L = parseFloat(document.getElementById('lSld').value);
+    thetaMax = parseFloat(document.getElementById('angSld').value);
+    animSpeed = parseFloat(document.getElementById('speedSld').value);
+    document.getElementById('lVal').innerText = L;
+    document.getElementById('angVal').innerText = thetaMax;
+    document.getElementById('speedVal').innerText = animSpeed;
+    if (!isRunning && aVel === 0) angle = radians(thetaMax);
+}
+
+function drawArrow(x, y, dx, dy, c, txt) {
+    if (abs(dx) < 1 && abs(dy) < 1) return;
+    stroke(c); fill(c); strokeWeight(2);
+    line(x, y, x + dx, y + dy);
+    push(); translate(x + dx, y + dy); rotate(atan2(dy, dx));
+    triangle(0, 0, -8, -4, -8, 4); pop();
+    noStroke(); textSize(10); text(txt, x + dx + 5, y + dy + 5);
+}
+
+function drawEnergy(len, ang, maxAng) {
+    // Perhitungan: m=1, g=10
+    let hMax = len * (1 - cos(radians(maxAng)));
+    let hCurr = len * (1 - cos(ang));
+    let etot = g * hMax; 
+    let ep = g * hCurr;
+    let ek = max(0, etot - ep);
+    
+    // Persentase
+    let epPct = (ep / etot) * 100;
+    let ekPct = (ek / etot) * 100;
+
+    let bx = 50, by = height - 120, bw = 40, bh = 100;
+    
+    // Batang Energi Potensial
+    fill(200); noStroke(); rect(bx, by, bw, bh); // Background bar
+    fill(46, 204, 113); rect(bx, by + (bh - map(ep, 0, etot, 0, bh)), bw, map(ep, 0, etot, 0, bh));
+    
+    // Batang Energi Kinetik
+    fill(200); noStroke(); rect(bx + 60, by, bw, bh); // Background bar
+    fill(231, 76, 60); rect(bx + 60, by + (bh - map(ek, 0, etot, 0, bh)), bw, map(ek, 0, etot, 0, bh));
+
+    // Label & Nilai Numerik
+    fill(0); textAlign(CENTER); textSize(11);
+    text("EP", bx + 20, by + bh + 15);
+    text(ep.toFixed(1) + " J", bx + 20, by + bh + 30);
+    text(epPct.toFixed(0) + "%", bx + 20, by - 5);
+
+    text("EK", bx + 80, by + bh + 15);
+    text(ek.toFixed(1) + " J", bx + 80, by + bh + 30);
+    text(ekPct.toFixed(0) + "%", bx + 80, by - 5);
+
+    textAlign(LEFT); 
+    fill(44, 62, 80); textStyle(BOLD);
+    text("Data Energi Mekanik (EM = " + etot.toFixed(1) + " J)", bx - 10, by - 30);
+    textStyle(NORMAL);
+}
+
+function startSim() { isRunning = true; }
+function pauseSim() { isRunning = false; }
+function resetSim() { isRunning = false; aVel = 0; angle = radians(parseFloat(document.getElementById('angSld').value)); }
+</script>

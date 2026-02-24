@@ -5,7 +5,10 @@
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         .main-container { max-width: 1000px; margin: auto; display: flex; flex-direction: column; gap: 15px; }
         .control-panel { background: white; padding: 20px; border-radius: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .canvas-area { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+        .canvas-area { background: white; border-radius: 12px; overflow: auto; overflow-y: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; cursor: grab; }
+        .canvas-area:active {cursor: grabbing;}
+        .canvas-area::-webkit-scrollbar {height: 10px;}
+        .canvas-area::-webkit-scrollbar-thumb {background: #bdc3c7; border-radius: 10px;}
         .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .stats-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .chart-container { background: white; padding: 15px; border-radius: 12px; height: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -69,9 +72,11 @@ let b1, b2, e, simSpeed;
 let collided = false;
 let myChart;
 let historyData = { t: [], v1: [], v2: [], p1: [], p2: [] };
+let trackWidth = 2500; // Bapak bisa atur panjang lintasan di sini
 
 function setup() {
-    let canvas = createCanvas(document.getElementById('p5-holder').offsetWidth, 250);
+    // Ukuran kanvas sekarang jauh lebih lebar dari kontainernya
+    let canvas = createCanvas(trackWidth, 250); 
     canvas.parent('p5-holder');
     initBalls();
     initChart();
@@ -83,14 +88,17 @@ function initBalls() {
     const v1 = parseFloat(document.getElementById('v1-slide').value);
     const v2 = parseFloat(document.getElementById('v2-slide').value);
     
-    b1 = { x: 150, y: height - 60, r: 20 + m1*3, v: v1, m: m1, color: '#e74c3c', ek_before: 0 };
-    b2 = { x: width - 150, y: height - 60, r: 20 + m2*3, v: v2, m: m2, color: '#3498db', ek_before: 0 };
-    
+// Posisi awal bola disesuaikan dengan lintasan yang panjang
+    b1 = { x: 200, y: height - 60, r: 20 + m1*3, v: v1, m: m1, color: '#e74c3c', ek_before: 0 };
+    b2 = { x: trackWidth - 200, y: height - 60, r: 20 + m2*3, v: v2, m: m2, color: '#3498db', ek_before: 0 };
+
     b1.ek_before = 0.5 * b1.m * b1.v * b1.v;
     b2.ek_before = 0.5 * b2.m * b2.v * b2.v;
     
     collided = false;
     historyData = { t: [], v1: [], v2: [], p1: [], p2: [] };
+    // Reset scroll posisi ke tengah atau ke awal saat reset
+    document.getElementById('p5-holder').scrollLeft = 0;
 }
 
 function draw() {
@@ -122,6 +130,13 @@ function draw() {
     // Gambar Bola
     drawBall(b1);
     drawBall(b2);
+
+    if (isMoving) {
+    let midPoint = (b1.x + b2.x) / 2;
+    let container = document.getElementById('p5-holder');
+    // Mengatur posisi scroll agar titik tengah bola selalu di tengah layar
+    container.scrollLeft = midPoint - container.offsetWidth / 2;
+}
 }
 
 function drawFloor() {
@@ -138,6 +153,14 @@ function drawBall(b) {
     // Vektor kecepatan
     stroke(b.color); strokeWeight(2);
     line(b.x, b.y - b.r - 10, b.x + b.v * 5, b.y - b.r - 10);
+
+    stroke(200); strokeWeight(4);
+    // Garis lantai digambar sepanjang trackWidth
+    line(0, height-40, trackWidth, height-40);
+    
+    // Detail lantai (garis arsir)
+    for(let i=0; i<trackWidth; i+=20) {
+        line(i, height-40, i-10, height-30);
 }
 
 function calculateCollision() {

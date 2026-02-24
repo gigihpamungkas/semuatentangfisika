@@ -36,3 +36,12 @@ Keterangan:
 1.  **Pengaruh Kecepatan:** Gerakkan magnet dengan lambat, lalu bandingkan dengan gerakan cepat. Amati penyimpangan jarum amperemeter.
 2.  **Pengaruh Lilitan:** Ubah slider **N** ke nilai maksimal, lalu gerakkan magnet. Apa perbedaannya dengan jumlah lilitan sedikit?
 3.  **Pengaruh Medan Magnet:** Ubah nilai **Tesla (B)** dan perhatikan bagaimana hal tersebut memengaruhi arus yang terbaca.
+
+
+# Uji Coba Rumus Fisika
+
+Ini adalah rumus GGL Induksi dalam satu baris: $\epsilon = -N \frac{\Delta \Phi}{\Delta t}$
+
+Dan ini adalah rumus dalam blok terpisah:
+
+$$\vec{F} = q(\vec{E} + \vec{v} \times \vec{B})$$

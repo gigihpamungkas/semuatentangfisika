@@ -10,7 +10,7 @@ aux_links:
 # Di dalam file _config.yml
 markdown: kramdown
 kramdown:
-  math_engine: mathjax
+  math_engine: null
 
 # Tambahkan ini di bagian paling bawah
 aux_links:

@@ -19,6 +19,7 @@ Eksperimen virtual ini memungkinkan Anda untuk menggerakkan magnet di sekitar ku
 Besarnya GGL induksi yang dihasilkan dipengaruhi oleh beberapa faktor sesuai persamaan:
 
   \epsilon =-N \frac{\Delta \Phi }{\Delta t}
+   \int \frac{a}{2}x+ x^{2}dx
 
 Berikut adalah rumusnya:
 

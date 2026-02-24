@@ -1,93 +1,90 @@
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <style>
-        /* Container utama agar tidak meluber keluar artikel */
-        .simulation-container {
-            width: 100%;
-            max-width: 100%;
-            margin: 0 auto;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+<style>
+    .simulation-container {
+        width: 100%;
+        margin: 0 auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
-        #ui-panel {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            gap: 15px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
+    #ui-panel {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        gap: 15px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            min-width: 120px;
-        }
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        min-width: 120px;
+    }
 
-        label {
-            font-weight: bold;
-            font-size: 12px;
-            margin-bottom: 5px;
-            color: #2c3e50;
-        }
+    label {
+        font-weight: bold;
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #2c3e50;
+    }
 
-        select, input[type=range] {
-            width: 100%;
-        }
+    #data-display {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        text-align: center;
+    }
 
-        #data-display {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            text-align: center;
-        }
+    .highlight { color: #f1c40f; font-weight: bold; }
 
-        .highlight { color: #f1c40f; font-weight: bold; }
+    button {
+        padding: 10px 20px;
+        background-color: #e67e22; /* Warna Oranye untuk membedakan */
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+    }
 
-        button {
-            padding: 10px 20px;
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            align-self: flex-end;
-        }
-
-        #canvas-container {
-            width: 100%;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-    </style>
+    #canvas-container {
+        width: 100%;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+</style>
 
 <div class="simulation-container">
     <div id="ui-panel">
         <div class="control-group">
             <label>Sudut Elevasi (°)</label>
             <select id="angleSelect">
+                <option value="0">0° (Mendatar)</option>
                 <option value="30">30°</option>
-                <option value="37">37°</option>
                 <option value="45" selected>45°</option>
-                <option value="53">53°</option>
                 <option value="60">60°</option>
-                <option value="90">90°</option>
+                <option value="90">90° (Vertikal)</option>
             </select>
         </div>
         
         <div class="control-group">
             <label>Kec. Awal (km/jam): <span id="v0Label">25</span></label>
             <input type="range" id="v0Slider" min="0" max="75" value="25">
+        </div>
+
+        <div class="control-group">
+            <label>Tinggi Awal (m): <span id="h0Label">0</span></label>
+            <input type="range" id="h0Slider" min="0" max="25" value="0" step="1">
         </div>
 
         <button onclick="launch()">TEMBAK!</button>
@@ -98,53 +95,58 @@
     <div id="data-display">
         <div>H-Max: <span id="hMaxDisplay" class="highlight">0</span> m</div>
         <div>X-Max: <span id="xMaxDisplay" class="highlight">0</span> m</div>
-        <div>Waktu: <span id="tDisplay" class="highlight">0</span> s</div>
+        <div>Waktu Total: <span id="tDisplay" class="highlight">0</span> s</div>
     </div>
 </div>
 
 <script>
-let angle, v0_kmh, v0_ms;
+let angle, v0_kmh, v0_ms, h0;
 const g = 9.8;
 let t = 0;
 let isMoving = false;
 let trajectory = [];
-let scaleFactor; // Akan dihitung dinamis
+let scaleFactor;
 
 function setup() {
     let container = document.getElementById('canvas-container');
-    let cnv = createCanvas(container.offsetWidth, 400);
+    let cnv = createCanvas(container.offsetWidth, 450);
     cnv.parent('canvas-container');
     updateScale();
 }
 
 function windowResized() {
     let container = document.getElementById('canvas-container');
-    resizeCanvas(container.offsetWidth, 400);
+    resizeCanvas(container.offsetWidth, 450);
     updateScale();
 }
 
 function updateScale() {
-    // Menyesuaikan skala agar jarak 50m tetap terlihat proporsional di lebar layar manapun
-    scaleFactor = width / 55; 
+    scaleFactor = width / 60; 
 }
 
 function draw() {
-    background(248);
+    background(135, 206, 235);
     
+    // Update Input Values
     v0_kmh = document.getElementById('v0Slider').value;
     document.getElementById('v0Label').innerText = v0_kmh;
+    
+    h0 = parseFloat(document.getElementById('h0Slider').value);
+    document.getElementById('h0Label').innerText = h0;
+    
     angle = radians(document.getElementById('angleSelect').value);
     v0_ms = v0_kmh * (1000/3600);
 
     drawGrid();
-    drawCannon(angle);
+    drawCliff(h0);
+    drawCannon(angle, h0);
 
     if (isMoving) {
         let vx0 = v0_ms * cos(angle);
         let vy0 = v0_ms * sin(angle);
         
         px = vx0 * t;
-        py = (vy0 * t) - (0.5 * g * t * t);
+        py = h0 + (vy0 * t) - (0.5 * g * t * t); // RUMUS DENGAN H0
 
         if (py >= 0) {
             trajectory.push({x: px, y: py});
@@ -160,49 +162,43 @@ function draw() {
 }
 
 function drawGrid() {
-    stroke(220); // Warna garis kisi (abu-abu muda)
+  // Gambar tanah (Rumput bawah)
+    noStroke();
+    fill(46, 204, 113);
+    rect(50, height - 50, width, 50);  
+  
+  stroke(220);
     strokeWeight(1);
+    line(50, height - 50, width, height - 50); // Sumbu X
+    line(50, 0, 50, height - 50);              // Sumbu Y
     
-    // 1. Gambar Garis Sumbu Utama
-    line(50, height - 50, width, height - 50); // Sumbu X (Horizontal)
-    line(50, 0, 50, height - 50);              // Sumbu Y (Vertikal)
+    fill(120); textSize(10); textAlign(CENTER, CENTER);
     
-    fill(120);
-    textSize(10);
-    textAlign(CENTER, CENTER);
-    
-    // 2. Angka & Ticks Sumbu X (Jarak Horizontal)
-    // Kita buat loop setiap 5 meter
-    for(let i = 0; i <= 20; i++) {
+    for(let i = 0; i <= 25; i++) {
         let xPos = 50 + i * (5 * scaleFactor);
         if (xPos <= width) {
-            stroke(220);
-            line(xPos, height-55, xPos, height-45); // Garis kecil (ticks)
-            noStroke();
-            text((i*5) + "m", xPos, height-30);
+            stroke(220); line(xPos, height-55, xPos, height-45);
+            noStroke(); text((i*5) + "m", xPos, height-30);
         }
     }
 
-    // 3. Angka & Ticks Sumbu Y (Ketinggian Vertikal) - MUNCULKAN KEMBALI
     textAlign(RIGHT, CENTER);
-    for(let j = 0; j <= 10; j++) {
+    for(let j = 0; j <= 15; j++) {
         let yPos = (height - 50) - j * (5 * scaleFactor);
         if (yPos >= 0) {
-            stroke(220);
-            line(45, yPos, 55, yPos); // Garis kecil (ticks) sumbu Y
-            noStroke();
-            // Berikan jarak 10 pixel ke kiri dari sumbu agar tidak tumpang tindih
-            text((j*5) + "m", 40, yPos);
+            stroke(220); line(45, yPos, 55, yPos);
+            noStroke(); text((j*5) + "m", 40, yPos);
         }
     }
 }
 
-function drawCannon(a) {
+function drawCannon(a, h) {
     push();
-    translate(50, height - 50);
+    // Meriam sekarang naik sesuai nilai h0
+    translate(50, (height - 50) - h * scaleFactor);
     rotate(-a);
     fill(52, 73, 94);
-    rect(0, -8, 30, 16, 3);
+    rect(0, -8, 35, 16, 3);
     fill(0);
     circle(0, 0, 15);
     pop();
@@ -226,11 +222,11 @@ function drawBall() {
         let last = trajectory[trajectory.length - 1];
         fill(41, 128, 185);
         noStroke();
-        circle(50 + last.x * scaleFactor, (height - 50) - last.y * scaleFactor, 10);
+        circle(50 + last.x * scaleFactor, (height - 50) - last.y * scaleFactor, 12);
         
         let highest = trajectory.reduce((prev, current) => (prev.y > current.y) ? prev : current);
         fill(39, 174, 96);
-        circle(50 + highest.x * scaleFactor, (height - 50) - highest.y * scaleFactor, 5);
+        circle(50 + highest.x * scaleFactor, (height - 50) - highest.y * scaleFactor, 6);
     }
 }
 
@@ -242,13 +238,50 @@ function launch() {
 
 function updateInfo() {
     let theta = radians(document.getElementById('angleSelect').value);
-    let v = v0_kmh * (1000/3600);
-    let hMax = (v * v * Math.pow(sin(theta), 2)) / (2 * g);
-    let xMax = (v * v * sin(2 * theta)) / g;
-    let tTotal = (2 * v * sin(theta)) / g;
+    let v = v0_ms;
+    let vy0 = v * sin(theta);
+    
+    // Ketinggian Maksimum dari tanah
+    let hMax = h0 + (vy0 * vy0) / (2 * g);
+    
+    // Waktu total menggunakan rumus kuadrat (karena y_akhir = 0)
+    // 0 = h0 + vy0.t - 0.5.g.t^2
+    let tTotal = (vy0 + Math.sqrt(vy0 * vy0 + 2 * g * h0)) / g;
+    let xMax = v * cos(theta) * tTotal;
 
     document.getElementById('hMaxDisplay').innerText = hMax.toFixed(2);
     document.getElementById('xMaxDisplay').innerText = xMax.toFixed(2);
     document.getElementById('tDisplay').innerText = tTotal.toFixed(2);
+}
+  
+  function drawCliff(h) {
+    push();
+    fill(100, 80, 60); // Warna cokelat batuan tebing
+    noStroke();
+    
+    // Menghitung koordinat tebing
+    let cliffTopY = (height - 50) - h * scaleFactor;
+    let cliffWidth = 65; // Sedikit lebih lebar dari posisi moncong meriam (50)
+
+    // Menggambar badan tebing (Poligon agar terlihat sedikit tidak beraturan)
+    beginShape();
+    vertex(0, height - 50);      // Sudut kiri bawah
+    vertex(cliffWidth, height - 50); // Sudut kanan bawah tebing
+    vertex(cliffWidth, cliffTopY);   // Sudut kanan atas tebing
+    vertex(0, cliffTopY);        // Sudut kiri atas tebing
+    endShape(CLOSE);
+
+    // Menambahkan detail tekstur batuan (garis-garis samar)
+    stroke(80, 60, 40);
+    strokeWeight(1);
+    for(let i = 0; i < h; i += 2) {
+        let lineY = (height - 50) - i * scaleFactor;
+        line(0, lineY, cliffWidth, lineY);
+    }
+
+    // Menambahkan rumput di atas tebing
+    fill(39, 174, 96);
+    rect(0, cliffTopY - 5, cliffWidth, 5);
+    pop();
 }
 </script>

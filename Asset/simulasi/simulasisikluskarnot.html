@@ -1,5 +1,4 @@
-
-    <title>Simulasi Siklus Carnot </title>
+    <title>Simulasi Siklus Carnot</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; }
@@ -8,25 +7,23 @@
         .control-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #0f3460; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
         .info-panel { background: #1a1a2e; padding: 15px; border-radius: 12px; border-left: 5px solid #4cc9f0; margin-bottom: 15px; font-size: 14px; }
         #canvas-holder { border-radius: 12px; overflow: hidden; background: #000; border: 2px solid #4cc9f0; width: 100%; height: auto; margin-bottom: 20px;}
-        
         .button-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: flex-end; }
         button { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; color: white; transition: 0.3s; font-size: 11px; }
         .btn-run { background: #2ecc71; }
         .btn-clear { background: #e94560; }
-        .btn-excel { background: #217346; } /* Warna Hijau Excel */
-        button:hover { opacity: 0.8; transform: translateY(-2px); }
-
+        .btn-excel { background: #217346; }
         table { width: 100%; border-collapse: collapse; background: #1a1a2e; border-radius: 10px; overflow: hidden; margin-top: 10px;}
         th, td { padding: 10px; text-align: center; border: 1px solid #0f3460; font-size: 12px; }
         th { background: #0f3460; color: #4cc9f0; }
         input[type=range] { width: 100%; accent-color: #4cc9f0; cursor: pointer; }
     </style>
 
+
 <div class="main-container">
-    <h2>Siklus Carnot: Laboratorium Virtual As-Syifa</h2>
+    <h2>Siklus Carnot: Perbaikan Logika Fisika</h2>
     
     <div class="info-panel">
-        <strong>Status Mesin:</strong> <span id="current-phase" style="color:#f1c40f;">Menunggu...</span> | 
+        <strong>Status:</strong> <span id="current-phase" style="color:#f1c40f;">Menunggu...</span> | 
         <strong>Efisiensi ($\eta$):</strong> <span id="eff-val" style="color:#2ecc71;">0%</span>
     </div>
 
@@ -53,10 +50,10 @@
             <tr><th>Titik</th><th>Volume ($m^3$)</th><th>Tekanan ($Pa$)</th></tr>
         </thead>
         <tbody>
-            <tr><td style="color:#f1c40f">A (Start Iso-Exp)</td><td id="vaval">-</td><td id="paval">-</td></tr>
-            <tr><td style="color:#f1c40f">B (Start Adia-Exp)</td><td id="vbval">-</td><td id="pbval">-</td></tr>
-            <tr><td style="color:#f1c40f">C (Start Iso-Comp)</td><td id="vcval">-</td><td id="pcval">-</td></tr>
-            <tr><td style="color:#f1c40f">D (Start Adia-Comp)</td><td id="vdval">-</td><td id="pdval">-</td></tr>
+            <tr><td style="color:#f1c40f; font-weight:bold;">A</td><td id="vaval">-</td><td id="paval">-</td></tr>
+            <tr><td style="color:#f1c40f; font-weight:bold;">B</td><td id="vbval">-</td><td id="pbval">-</td></tr>
+            <tr><td style="color:#f1c40f; font-weight:bold;">C</td><td id="vcval">-</td><td id="pcval">-</td></tr>
+            <tr><td style="color:#f1c40f; font-weight:bold;">D</td><td id="vdval">-</td><td id="pdval">-</td></tr>
         </tbody>
     </table>
 </div>
@@ -64,7 +61,8 @@
 <script>
 let v = 150, p = 300, phase = 0, isRunning = false;
 let path = []; 
-let th, tc, maxP = 800;
+let th, tc, maxP = 850;
+let pointsData = { a: null, b: null, c: null, d: null };
 
 function setup() {
     let container = document.getElementById('canvas-holder');
@@ -85,6 +83,7 @@ function toggleCycle() {
 
 function clearSim() {
     path = []; phase = 0; v = 150; p = 300; isRunning = false;
+    pointsData = { a: null, b: null, c: null, d: null };
     document.getElementById('btn-run-text').innerText = "JALANKAN";
     ['va','pa','vb','pb','vc','pc','vd','pd'].forEach(id => {
         let el = document.getElementById(id + 'val');
@@ -92,25 +91,14 @@ function clearSim() {
     });
 }
 
-// FUNGSI EKSPORT EXCEL (CSV)
 function exportToCSV() {
-    if (path.length === 0) {
-        alert("Jalankan siklus terlebih dahulu untuk mendapatkan data!");
-        return;
-    }
-    
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Tahap,Volume (m3),Tekanan (Pa)\r\n";
-    
-    path.forEach(function(row) {
-        let line = row.phaseName + "," + (row.vx/100).toFixed(2) + "," + row.py.toFixed(2);
-        csvContent += line + "\r\n";
-    });
-    
+    if (path.length === 0) { alert("Jalankan siklus terlebih dahulu!"); return; }
+    let csvContent = "data:text/csv;charset=utf-8,Tahap,Volume (m3),Tekanan (Pa)\r\n";
+    path.forEach(r => csvContent += r.phaseName + "," + (r.vx/100).toFixed(2) + "," + r.py.toFixed(2) + "\r\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "data_siklus_carnot_assyifa.csv");
+    link.setAttribute("download", "data_carnot_assyifa.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -123,7 +111,9 @@ function draw() {
     document.getElementById('th-label').innerText = th;
     document.getElementById('tc-label').innerText = tc;
     document.getElementById('eff-val').innerText = ((1 - (tc/th)) * 100).toFixed(1) + "%";
-    maxP = map(th, 500, 950, 500, 850);
+    
+    // Skala P dinamis berdasarkan Th
+    maxP = map(th, 500, 950, 600, 950);
 
     updatePhysics();
     drawRealEngine();
@@ -132,60 +122,66 @@ function draw() {
 
 function updatePhysics() {
     if (!isRunning) return;
-    let currentPhaseName = "";
-
-    if (phase === 1) { 
-        if (v <= 151) recordData('a');
-        v += 1.5; p = (th * 85) / v; 
-        currentPhaseName = "Isotermal Ekspansi";
-        if (v >= 260) { phase = 2; recordData('b'); }
+    let name = "";
+    
+    // LOGIKA PERBAIKAN FISIKA (Berdasarkan Gambar Perbandingan)
+    if (phase === 1) { // A ke B: Isotermal Ekspansi
+        if (v <= 151) { recordData('a'); pointsData.a = {v:v, p:p}; }
+        v += 1.5;
+        p = (th * 75) / v; // Hukum Gas Ideal P = nRT/V
+        name = "Iso-Exp";
+        if (v >= 260) { phase = 2; recordToTable('b'); pointsData.b = {v:v, p:p}; }
     } 
-    else if (phase === 2) { 
-        v += 1.2; p = (th * 85 * pow(260, 0.4)) / pow(v, 1.4); 
-        currentPhaseName = "Adiabatik Ekspansi";
-        if (v >= 380) { phase = 3; recordData('c'); }
+    else if (phase === 2) { // B ke C: Adiabatik Ekspansi (Lebih CURAM)
+        v += 1.2;
+        // Hukum Poisson: P = K / V^1.4
+        p = (th * 75 * Math.pow(260, 0.4)) / Math.pow(v, 1.4); 
+        name = "Adia-Exp";
+        if (v >= 380) { phase = 3; recordToTable('c'); pointsData.c = {v:v, p:p}; }
     }
-    else if (phase === 3) { 
-        v -= 1.5; p = (tc * 155) / v;
-        currentPhaseName = "Isotermal Kompresi";
-        if (v <= 220) { phase = 4; recordData('d'); }
+    else if (phase === 3) { // C ke D: Isotermal Kompresi
+        v -= 1.5;
+        p = (tc * 105) / v; 
+        name = "Iso-Comp";
+        if (v <= 220) { phase = 4; recordToTable('d'); pointsData.d = {v:v, p:p}; }
     }
-    else if (phase === 4) { 
-        v -= 1.2; p = (tc * 155 * pow(220, 0.4)) / pow(v, 1.4);
-        currentPhaseName = "Adiabatik Kompresi";
-        if (v <= 150) { phase = 1; recordData('a'); }
+    else if (phase === 4) { // D ke A: Kompresi Adiabatik (Kembali ke A)
+        v -= 1.2;
+        // Hukum Poisson: P = K / V^1.4
+        p = (tc * 105 * Math.pow(220, 0.4)) / Math.pow(v, 1.4);
+        name = "Adia-Comp";
+        if (v <= 150) { phase = 1; recordToTable('a'); pointsData.a = {v:v, p:p}; }
     }
     
-    path.push({vx: v, py: p, phaseName: currentPhaseName});
-    if (path.length > 3000) path.shift();
+    path.push({vx: v, py: p, phaseName: name});
+    if (path.length > 2500) path.shift();
 }
 
 function recordData(point) {
-    let vId = 'v' + point + 'val';
-    let pId = 'p' + point + 'val';
+    let vId = 'v' + point + 'val', pId = 'p' + point + 'val';
     if(document.getElementById(vId)) document.getElementById(vId).innerText = (v/100).toFixed(2);
     if(document.getElementById(pId)) document.getElementById(pId).innerText = p.toFixed(2);
 }
 
+// Alias untuk recordData agar konsisten dengan panggilan fungsi
+function recordToTable(pt) { recordData(pt); }
+
 function drawRealEngine() {
     let ex = width * 0.22, ey = height - 100, tubeW = 140, pistonY = ey - v;
     noStroke();
-    if (phase === 1) fill(255, 60, 0, 200); 
-    else if (phase === 3) fill(0, 180, 255, 200); 
-    else fill(150, 150, 160, 100); 
+    if (phase === 1) fill(255, 60, 0, 200); else if (phase === 3) fill(0, 180, 255, 200); else fill(150, 150, 160, 100); 
     rect(ex - tubeW/2, pistonY, tubeW, v);
-    stroke(120); strokeWeight(8); noFill();
-    rect(ex - tubeW/2 - 4, ey - 410, tubeW + 8, 410, 8);
-    fill(200); stroke(50); strokeWeight(2);
-    rect(ex - tubeW/2 - 2, pistonY - 35, tubeW + 4, 45, 5); 
-    stroke(160); strokeWeight(10);
-    line(ex, pistonY, ex, ey + 30);
-    fill(50); noStroke(); rect(ex - tubeW/2 - 15, ey, tubeW + 30, 90, 10);
+    stroke(120); strokeWeight(8); noFill(); rect(ex-tubeW/2-4, ey-410, tubeW+8, 410, 8);
+    fill(200); stroke(50); strokeWeight(2); rect(ex-tubeW/2-2, pistonY-35, tubeW+4, 45, 5); 
+    stroke(160); strokeWeight(10); line(ex, pistonY, ex, ey+30);
+    fill(50); noStroke(); rect(ex-tubeW/2-15, ey, tubeW+30, 90, 10);
 }
 
 function drawPVGraph() {
     let gx = width * 0.52, gy = height - 85, gW = width * 0.42, gH = 360;
-    stroke(255, 50); strokeWeight(1);
+    
+    // Grid dan Sumbu
+    stroke(255, 30); strokeWeight(1);
     for(let i=0; i<=5; i++) {
         let x = gx + (gW/5)*i; let y = gy - (gH/5)*i;
         line(x, gy, x, gy-gH); line(gx, y, gx+gW, y);
@@ -193,24 +189,41 @@ function drawPVGraph() {
         text((1.0 + i * 0.6).toFixed(1), x, gy + 15);
         textAlign(RIGHT); text(Math.round((maxP/5) * i), gx - 10, y + 4);
     }
-    stroke(255); strokeWeight(2);
-    line(gx, gy, gx + gW, gy); line(gx, gy, gx, gy - gH);
+    stroke(255); strokeWeight(2); line(gx, gy, gx+gW, gy); line(gx, gy, gx, gy-gH);
+    
+    // Label Sumbu
     fill(76, 201, 240); noStroke(); textAlign(CENTER); textSize(12);
-    text("Volume (V) [m³]", gx + gW/2, gy + 35);
-    push(); translate(gx - 55, gy - gH/2); rotate(-HALF_PI); text("Tekanan (P) [Pa]", 0, 0); pop();
+    text("Volume (V) [m³]", gx+gW/2, gy+40);
+    push(); translate(gx-60, gy-gH/2); rotate(-HALF_PI); text("Tekanan (P) [Pa]", 0, 0); pop();
 
+    // Gambar Jalur Grafik
     noFill(); stroke(255, 215, 0); strokeWeight(3);
     beginShape();
     path.forEach(pt => vertex(map(pt.vx, 100, 400, gx, gx + gW), map(pt.py, 0, maxP, gy, gy - gH)));
     endShape();
 
+    // Gambar Titik Label A, B, C, D
+    textSize(16); textStyle(BOLD);
+    Object.keys(pointsData).forEach(key => {
+        let pt = pointsData[key];
+        if (pt) {
+            let px = map(pt.v, 100, 400, gx, gx + gW);
+            let py = map(pt.p, 0, maxP, gy, gy - gH);
+            fill(255, 255, 0); stroke(0); strokeWeight(2);
+            ellipse(px, py, 8, 8);
+            noStroke(); fill(255);
+            text(key.toUpperCase(), px + 10, py - 10);
+        }
+    });
+
+    // Indikator Posisi Saat Ini
     let dotX = map(v, 100, 400, gx, gx + gW), dotY = map(p, 0, maxP, gy, gy - gH);
     fill(255, 0, 0); stroke(255); strokeWeight(1); ellipse(dotX, dotY, 12, 12);
-    stroke(255, 100); line(gx, dotY, dotX, dotY); line(dotX, gy, dotX, dotY);
-
+    
+    // Keterangan Fase
     fill(255); textAlign(LEFT); textSize(14);
-    let labels = ["Idle", "A-B: Ekspansi Isotermal", "B-C: Ekspansi Adiabatik", "C-D: Kompresi Isotermal", "D-A: Kompresi Adiabatik"];
-    text(labels[phase] || "", gx, gy - gH - 20);
+    let labels = ["Idle", "A-B: Isotermal Ekspansi", "B-C: Adiabatik Ekspansi", "C-D: Isotermal Kompresi", "D-A: Kompresi Adiabatik"];
+    text(labels[phase] || "", gx, gy - gH - 25);
     document.getElementById('current-phase').innerText = labels[phase] || "Idle";
 }
 </script>

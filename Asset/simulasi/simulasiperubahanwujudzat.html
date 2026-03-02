@@ -1,0 +1,249 @@
+    <title>Simulasi Perubahan Wujud Zat </title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; background: #0f3460; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .control-group { background: #1a1a2e; padding: 15px; border-radius: 10px; border-top: 4px solid #e94560; }
+        label { font-size: 12px; font-weight: bold; display: block; margin-bottom: 8px; color: #aaa; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #e94560; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .stats-display { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .stat-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #e94560; }
+        .stat-value { font-size: 1.4rem; font-weight: bold; color: #f1c40f; display: block; }
+        
+        .button-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; color: white; }
+        .btn-run { background: #2ecc71; }
+        .btn-reset { background: #e94560; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+    </style>
+
+
+<div class="main-container">
+    <h2>Simulasi Perubahan Wujud Zat (H<sub>2</sub>O)</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Massa Es ($m$): <span id="m-label" style="color:#4cc9f0">100</span> gram</label>
+            <input type="range" id="m-slider" min="50" max="500" value="100">
+        </div>
+        <div class="control-group">
+            <label>Daya Pemanas (Kal/s): <span id="p-label" style="color:#f1c40f">500</span></label>
+            <input type="range" id="p-slider" min="100" max="2000" value="500">
+        </div>
+        <div class="button-group">
+            <button class="btn-run" onclick="toggleSim()" id="run-btn">PANASKAN</button>
+            <button class="btn-reset" onclick="resetSim()">RESET</button>
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div class="stats-display">
+        <div class="stat-card"><span>Suhu Saat Ini</span><span id="temp-val" class="stat-value">-10 °C</span></div>
+        <div class="stat-card"><span>Fase Zat</span><span id="fase-val" class="stat-value">Padat (Es)</span></div>
+        <div class="stat-card"><span>Total Kalor ($Q$)</span><span id="q-val" class="stat-value">0 Kal</span></div>
+    </div>
+</div>
+
+<script>
+let isRunning = false;
+let temp = -10;
+let qTotal = 0;
+let mass, power;
+let graphPoints = [];
+let time = 0;
+
+// Konstanta Fisika H2O
+const cEs = 0.5;      // Kal/g°C
+const Lf = 80;        // Kal/g (Lebur)
+const cAir = 1;       // Kal/g°C
+const Lv = 540;       // Kal/g (Uap)
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 500);
+    canvas.parent('canvas-holder');
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 500);
+}
+
+function toggleSim() {
+    isRunning = !isRunning;
+    document.getElementById('run-btn').innerText = isRunning ? "PAUSE" : "LANJUTKAN";
+}
+
+function resetSim() {
+    isRunning = false;
+    temp = -10;
+    qTotal = 0;
+    time = 0;
+    graphPoints = [];
+    document.getElementById('run-btn').innerText = "PANASKAN";
+}
+
+function draw() {
+    background(10, 15, 30);
+    mass = parseFloat(document.getElementById('m-slider').value);
+    power = parseFloat(document.getElementById('p-slider').value);
+    
+    document.getElementById('m-label').innerText = mass;
+    document.getElementById('p-label').innerText = power;
+
+    if (isRunning && temp < 120) {
+        updatePhysics();
+    }
+
+    drawEngine();
+    drawGraph();
+    updateUI();
+}
+
+function updatePhysics() {
+    let dt = 0.1; // Delta time per frame
+    let dQ = power * dt;
+    qTotal += dQ;
+    time += dt;
+
+    if (temp < 0) { // Pemanasan Es
+        temp += dQ / (mass * cEs);
+        if (temp > 0) temp = 0;
+    } 
+    else if (temp === 0 && qTotal < calculateQLebur()) { // Melebur
+        // Suhu tetap 0 sampai semua es mencair
+    } 
+    else if (temp >= 0 && temp < 100) { // Pemanasan Air
+        let qSisa = (temp === 0) ? (qTotal - calculateQLebur()) : dQ;
+        if (qSisa > 0) temp += qSisa / (mass * cAir);
+        if (temp > 100) temp = 100;
+    }
+    else if (temp === 100 && qTotal < calculateQUap()) { // Mendidih
+        // Suhu tetap 100
+    }
+    else { // Pemanasan Uap
+        temp += 0.5; // Kenaikan uap dipercepat untuk visual
+    }
+
+    graphPoints.push({q: qTotal, t: temp});
+    if (graphPoints.length > 2000) graphPoints.shift();
+}
+
+function calculateQLebur() { return mass * cEs * 10 + mass * Lf; }
+function calculateQUap() { return calculateQLebur() + mass * cAir * 100 + mass * Lv; }
+
+function drawEngine() {
+    let ex = width * 0.22;
+    let ey = 250;
+    let pw = 160;
+    
+    // 1. Api
+    if (isRunning && temp < 110) {
+        let fireH = map(power, 100, 2000, 20, 60);
+        for (let i = 0; i < 8; i++) {
+            fill(255, 100 + i * 20, 0, 200);
+            noStroke();
+            ellipse(ex - 60 + i * 18, ey + 40, fireH/2, fireH + random(10));
+        }
+    }
+
+    // 2. Panci
+    stroke(200); strokeWeight(4); noFill();
+    rect(ex - pw/2, ey - 100, pw, 130, 0, 0, 10, 10);
+    
+    // 3. Visual Zat
+    noStroke();
+    if (temp < 0) { // Es Batu
+        fill(200, 230, 255);
+        for(let i=0; i<5; i++) rect(ex-50+i*20, ey-20, 15, 15, 3);
+    } else if (temp >= 0 && temp < 100) { // Air
+        let waterLevel = map(temp, 0, 100, 20, 80);
+        fill(52, 152, 219, 150);
+        rect(ex-pw/2+4, ey+28-waterLevel, pw-8, waterLevel, 0, 0, 10, 10);
+        if (temp > 0) { // Sisa Es Mengecil
+            fill(255, 200);
+            let iceSize = map(qTotal, calculateQLebur() - mass*Lf, calculateQLebur(), 40, 0);
+            if (iceSize > 0) rect(ex-20, ey+10-iceSize/2, iceSize, iceSize/2, 2);
+        }
+    }
+    
+    // Efek Uap
+    if (temp >= 95) {
+        fill(255, 50);
+        for(let i=0; i<5; i++) ellipse(ex + random(-40,40), ey - 120 - random(50), 20, 10);
+    }
+}
+
+function drawGraph() {
+    let gx = width * 0.45;
+    let gy = 400;
+    let gW = width * 0.5;
+    let gH = 350;
+
+    // Sumbu
+    stroke(255, 100); strokeWeight(2);
+    line(gx, gy, gx + gW, gy); // Q
+    line(gx, gy, gx, gy - gH); // T
+
+    // Skala Suhu (Sumbu Y)
+    textAlign(RIGHT); textSize(10); noStroke(); fill(200);
+    for(let s=-20; s<=120; s+=20) {
+        let y = map(s, -20, 120, gy, gy - gH);
+        text(s + "°", gx - 10, y + 4);
+        stroke(255, 20); line(gx, y, gx+gW, y);
+    }
+
+    // Skala Kalor (Sumbu X) - PENAMBAHAN BARU
+    let maxQ_Visual = (mass > 300) ? 400000 : 200000;
+    textAlign(CENTER);
+    for(let i=0; i<=maxQ_Visual; i+=maxQ_Visual/5) {
+        let x = map(i, 0, maxQ_Visual, gx, gx + gW);
+        stroke(255, 20); line(x, gy, x, gy - gH); // Garis bantu vertikal
+        noStroke(); fill(200);
+        text(Math.floor(i/1000) + "k", x, gy + 20);
+    }
+
+    // Label Sumbu
+    textAlign(CENTER); fill(76, 201, 240);
+    text("Kalor (Q) [Kalori] →", gx + gW/2, gy + 45);
+    push(); translate(gx-60, gy-gH/2); rotate(-HALF_PI); text("Suhu (T) [°C] →", 0, 0); pop();
+
+    // Plot Kurva
+    noFill(); stroke(241, 196, 15); strokeWeight(3);
+    beginShape();
+    for (let p of graphPoints) {
+        let x = map(p.q, 0, maxQ_Visual, gx, gx + gW);
+        let y = map(p.t, -20, 120, gy, gy - gH);
+        if (x < gx + gW) vertex(x, y);
+    }
+    endShape();
+    
+    // Titik Penanda
+    if (graphPoints.length > 0) {
+        let last = graphPoints[graphPoints.length-1];
+        let lx = map(last.q, 0, maxQ_Visual, gx, gx + gW);
+        let ly = map(last.t, -20, 120, gy, gy - gH);
+        fill(255, 0, 0); noStroke();
+        if (lx < gx + gW) ellipse(lx, ly, 10, 10);
+    }
+}
+
+function updateUI() {
+    document.getElementById('temp-val').innerText = temp.toFixed(1) + " °C";
+    document.getElementById('q-val').innerText = Math.round(qTotal).toLocaleString('id-ID') + " Kal";
+    
+    let fase = "Padat (Es)";
+    if (temp === 0 && qTotal < calculateQLebur()) fase = "Melebur (Es + Air)";
+    else if (temp > 0 && temp < 100) fase = "Cair (Air)";
+    else if (temp === 100 && qTotal < calculateQUap()) fase = "Mendidih (Air + Uap)";
+    else if (temp > 100) fase = "Gas (Uap Panas)";
+    document.getElementById('fase-val').innerText = fase;
+}
+</script>

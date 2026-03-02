@@ -1,14 +1,11 @@
 ---
 layout: default
-title: gerak pendulum
+title: teori kinetik gas
 parent: Simulasi
 mathjax: true
-nav_order: 6
+nav_order: 8
 ---
 
-## Simulasi Gerak Parabola
-Gunakan slider panjang tali, sudut maksimal, dan kecepatan animasi
-tekan tombol start untuk memulai, 
-anda bisa melihat vektor gaya, percepatan dan gaya resultan pada pendulum dan anda bisa besar energi kinetik dan potensial nya berdasarkan gerak pendulum.
+## Simulasi Teori Kinetik Gas
 
-<iframe src="Asset/simulasi/gerakpendulum.html" width="100%" height="800px" frameborder="0"></iframe>
+<iframe src="Asset/simulasi/teorikinetikgas.html" width="100%" height="800px" frameborder="0"></iframe>

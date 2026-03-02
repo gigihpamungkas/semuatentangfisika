@@ -1,11 +1,11 @@
 ---
 layout: default
-title: teori kinetik gas
+title: gerak pendulum
 parent: Simulasi
 mathjax: true
-nav_order: 8
+nav_order: 6
 ---
 
-## Simulasi Teori Kinetik Gas
+## Simulasi gerak pendulum
 
-<iframe src="Asset/simulasi/teorikinetikgas.html" width="100%" height="800px" frameborder="0"></iframe>
+<iframe src="Asset/simulasi/gerakpendulum.html" width="100%" height="800px" frameborder="0"></iframe>

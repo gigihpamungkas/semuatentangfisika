@@ -1,0 +1,232 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #0f3460; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .control-group { background: #1a1a2e; padding: 15px; border-radius: 10px; border-top: 4px solid #f1c40f; }
+        label { font-size: 12px; font-weight: bold; display: block; margin-bottom: 8px; color: #aaa; }
+        select, input[type=range] { width: 100%; cursor: pointer; background: #16213e; color: #fff; border: 1px solid #4cc9f0; padding: 5px; border-radius: 5px; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .stats-display { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .stat-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #f1c40f; }
+        .stat-value { font-size: 1.4rem; font-weight: bold; color: #f1c40f; display: block; }
+        
+        .button-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; color: white; }
+        .btn-run { background: #2ecc71; }
+        .btn-reset { background: #e94560; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Pemuaian Panjang Logam</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Pilih Jenis Logam:</label>
+            <select id="metal-select" onchange="resetSim()">
+                <option value="0.000024">Alumunium (α = 0.000024)</option>
+                <option value="0.000017">Tembaga (α = 0.000017)</option>
+                <option value="0.000012">Besi (α = 0.000012)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Suhu Api (°C): <span id="t-label" style="color:#f1c40f">25</span></label>
+            <input type="range" id="t-slider" min="25" max="500" value="25">
+        </div>
+        <div class="button-group">
+            <button class="btn-run" onclick="toggleSim()" id="run-btn">PANASKAN</button>
+            <button class="btn-reset" onclick="resetSim()">RESET</button>
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div class="stats-display">
+        <div class="stat-card"><span>Panjang Akhir (L)</span><span id="l-val" class="stat-value">1.00000 m</span></div>
+        <div class="stat-card"><span>Pertambahan (ΔL)</span><span id="dl-val" class="stat-value">0.00 mm</span></div>
+        <div class="stat-card"><span>Suhu Logam</span><span id="temp-val" class="stat-value">25 °C</span></div>
+    </div>
+</div>
+
+<script>
+let isRunning = false;
+let l0 = 1.0; 
+let currentTemp = 25;
+let alpha = 0.000024;
+let deltaL = 0;
+let graphPoints = [];
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 480);
+    canvas.parent('canvas-holder');
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 480);
+}
+
+function toggleSim() {
+    isRunning = !isRunning;
+    document.getElementById('run-btn').innerText = isRunning ? "PAUSE" : "LANJUTKAN";
+    if (currentTemp === 25) resetSim();
+}
+
+function resetSim() {
+    currentTemp = 25;
+    deltaL = 0;
+    graphPoints = [];
+    document.getElementById('mix-btn') ? document.getElementById('mix-btn').disabled = false : null;
+}
+
+function draw() {
+    background(10, 15, 30);
+    alpha = parseFloat(document.getElementById('metal-select').value);
+    let targetTemp = parseFloat(document.getElementById('t-slider').value);
+    document.getElementById('t-label').innerText = targetTemp;
+
+    if (isRunning) {
+        if (currentTemp < targetTemp) currentTemp += 0.8;
+        if (currentTemp > targetTemp) currentTemp -= 0.8;
+    }
+
+    // deltaL = L0 * alpha * deltaT
+    deltaL = l0 * alpha * (currentTemp - 25);
+    
+    drawApparatus();
+    drawGraph();
+    updateUI();
+}
+
+function drawApparatus() {
+    let bx = 60; 
+    let by = 280; // Batang diletakkan lebih rendah agar dial indicator di atasnya punya ruang
+    let baseWidth = width * 0.35; 
+    
+    // 1. Api (Ukuran tetap, warna berubah sesuai suhu)
+    if (isRunning && currentTemp > 30) {
+        let fireSize = 35; 
+        let r = 255;
+        let g = map(currentTemp, 25, 500, 50, 255); 
+        let b = map(currentTemp, 25, 500, 0, 200);
+        
+        for(let i=0; i<5; i++) {
+            let fx = bx + 30 + i * (baseWidth/5);
+            fill(r, g, b, 200);
+            noStroke();
+            ellipse(fx, by + 45, fireSize + random(-2,2), (fireSize*1.5) + random(-5,5));
+        }
+    }
+
+    // 2. Dudukan Logam
+    stroke(150); strokeWeight(4);
+    line(bx - 10, by + 25, bx + baseWidth + 10, by + 25); 
+    line(bx - 10, by + 25, bx - 10, by + 60); 
+    line(bx + baseWidth + 10, by + 25, bx + baseWidth + 10, by + 60); 
+
+    // 3. Batang Logam
+    let visualL = baseWidth;
+    let visualDeltaL = deltaL * 4000; 
+    
+    let mr = map(currentTemp, 25, 500, 180, 255);
+    let mg = map(currentTemp, 25, 500, 180, 50);
+    let mb = map(currentTemp, 25, 500, 180, 50);
+    fill(mr, mg, mb);
+    stroke(50); strokeWeight(1);
+    rect(bx, by, visualL + visualDeltaL, 18, 2);
+
+    // 4. Dial Indicator (Visual "Jam" di ATAS Batang)
+    push();
+    let dialX = bx + visualL + visualDeltaL;
+    let dialY = by - 80; // Posisi di atas batang
+    translate(dialX, dialY);
+    
+    // Body Dial
+    fill(240); stroke(100); strokeWeight(3);
+    circle(0, 0, 70); 
+    fill(255); circle(0, 0, 60);
+    
+    // Batang Tekan (Pin)
+    stroke(180); strokeWeight(5);
+    line(0, 35, 0, 80); // Dari dial ke batang logam
+    
+    // Skala Angka Dial
+    stroke(0, 50); strokeWeight(1);
+    for(let a=0; a<TWO_PI; a+=PI/5) {
+        line(cos(a)*24, sin(a)*24, cos(a)*28, sin(a)*28);
+    }
+    
+    // Label Dial
+    noStroke(); fill(100); textAlign(CENTER); textSize(8);
+    text("ΔL (mm)", 0, 15);
+
+    // Jarum Merah (Perbesar gerakan linear ΔL menjadi putaran)
+    // Jarum berputar 360 derajat (TWO_PI) untuk pertambahan 1mm (0.001 m)
+    let angle = map(deltaL, 0, 0.002, 0, TWO_PI * 2); 
+    stroke(231, 69, 96); strokeWeight(2);
+    line(0, 0, cos(angle - HALF_PI)*25, sin(angle - HALF_PI)*25);
+    fill(231, 69, 96); circle(0,0,5);
+    pop();
+}
+
+function drawGraph() {
+    let gx = width * 0.58; 
+    let gy = height - 80;
+    let gW = width * 0.35;
+    let gH = 220;
+
+    // Grid & Sumbu
+    stroke(255, 30); strokeWeight(1);
+    for(let i=0; i<=5; i++) {
+        let y = map(i*3, 0, 15, gy, gy - gH);
+        line(gx, y, gx + gW, y);
+    }
+
+    stroke(255, 150); strokeWeight(2);
+    line(gx, gy, gx + gW, gy); 
+    line(gx, gy, gx, gy - gH); 
+
+    // Label Sumbu
+    textAlign(CENTER); fill(76, 201, 240); noStroke(); textSize(12);
+    text("Kenaikan Suhu (ΔT) [°C]", gx + gW/2, gy + 45);
+    push(); translate(gx - 55, gy - gH/2); rotate(-HALF_PI); text("Pemuaian (ΔL) [mm]", 0, 0); pop();
+
+    // Skala Nilai
+    textAlign(RIGHT); fill(200); textSize(10);
+    for(let i=0; i<=15; i+=3) {
+        let y = map(i, 0, 15, gy, gy - gH);
+        text(i, gx - 10, y + 4);
+    }
+    for(let i=0; i<=500; i+=100) {
+        let x = map(i, 0, 500, gx, gx + gW);
+        text(i, x, gy + 20);
+    }
+
+    // Plotting
+    if (isRunning && currentTemp > 25) {
+        graphPoints.push({t: currentTemp - 25, dl: deltaL * 1000}); // mm
+        if (graphPoints.length > 1500) graphPoints.shift();
+    }
+
+    noFill(); stroke(241, 196, 15); strokeWeight(3);
+    beginShape();
+    graphPoints.forEach(p => {
+        let x = map(p.t, 0, 500, gx, gx + gW);
+        let y = map(p.dl, 0, 15, gy, gy - gH);
+        if (x >= gx) vertex(x, y);
+    });
+    endShape();
+}
+
+function updateUI() {
+    document.getElementById('temp-val').innerText = currentTemp.toFixed(1) + " °C";
+    document.getElementById('dl-val').innerText = (deltaL * 1000).toFixed(2) + " mm";
+    document.getElementById('l-val').innerText = (l0 + deltaL).toFixed(5) + " m";
+}
+</script>

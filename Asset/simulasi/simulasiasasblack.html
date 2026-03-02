@@ -1,0 +1,284 @@
+    <title>Simulasi Asas Black </title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; background: #0f3460; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .control-group { background: #1a1a2e; padding: 15px; border-radius: 10px; border-top: 4px solid #4cc9f0; }
+        label { font-size: 12px; font-weight: bold; display: block; margin-bottom: 8px; color: #aaa; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #4cc9f0; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .stats-display { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .stat-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #4cc9f0; }
+        .stat-value { font-size: 1.4rem; font-weight: bold; color: #4cc9f0; display: block; }
+        .unit { font-size: 0.8rem; color: #888; }
+        
+        button { background: #2ecc71; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #27ae60; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4); }
+        button:disabled { background: #555; cursor: not-allowed; transform: none; }
+    </style>
+
+
+<div class="main-container">
+    <h2>Simulasi Kalorimetri: Asas Black</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>AIR PANAS (Merah)</label>
+            <label>Massa: <span id="m1-label" style="color:#e74c3c">250</span> mL</label>
+            <input type="range" id="m1-slider" min="50" max="500" value="250">
+            <label>Suhu (T1): <span id="t1-label" style="color:#e74c3c">80</span> °C</label>
+            <input type="range" id="t1-slider" min="50" max="100" value="80">
+        </div>
+        <div class="control-group">
+            <label>AIR DINGIN (Biru)</label>
+            <label>Massa: <span id="m2-label" style="color:#3498db">250</span> mL</label>
+            <input type="range" id="m2-slider" min="50" max="500" value="250">
+            <label>Suhu (T2): <span id="t2-label" style="color:#3498db">20</span> °C</label>
+            <input type="range" id="t2-slider" min="0" max="40" value="20">
+        </div>
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+            <button id="mix-btn" onclick="startMixing()">CAMPURKAN AIR</button>
+            <button style="background: #e94560; margin-top: 10px;" onclick="resetSim()">RESET</button>
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div class="stats-display">
+        <div class="stat-card">
+            <span class="unit">Suhu Setimbang (Ts)</span>
+            <span id="tc-val" class="stat-value">--</span>
+        </div>
+        <div class="stat-card">
+            <span class="unit">Energi Berpindah (Q)</span>
+            <span id="q-val" class="stat-value">--</span>
+            <span class="unit">Kalori</span>
+        </div>
+    </div>
+</div>
+
+<script>
+let mixing = false;
+let progress = 0; // 0 to 1
+let m1, t1, m2, t2, tc;
+let graphPoints = [];
+let animSpeed = 0.005;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 550);
+    canvas.parent('canvas-holder');
+    updateParams();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 550);
+}
+
+function updateParams() {
+    m1 = parseFloat(document.getElementById('m1-slider').value);
+    t1 = parseFloat(document.getElementById('t1-slider').value);
+    m2 = parseFloat(document.getElementById('m2-slider').value);
+    t2 = parseFloat(document.getElementById('t2-slider').value);
+    
+    // Rumus Asas Black: m1 * (t1 - tc) = m2 * (tc - t2)
+    tc = (m1 * t1 + m2 * t2) / (m1 + m2);
+    
+    document.getElementById('m1-label').innerText = m1;
+    document.getElementById('t1-label').innerText = t1;
+    document.getElementById('m2-label').innerText = m2;
+    document.getElementById('t2-label').innerText = t2;
+}
+
+function startMixing() {
+    updateParams();
+    mixing = true;
+    progress = 0;
+    graphPoints = [];
+    document.getElementById('mix-btn').disabled = true;
+    
+    let q = m1 * 1 * (t1 - tc); // Q = m.c.dT
+    document.getElementById('tc-val').innerText = tc.toFixed(2) + " °C";
+    document.getElementById('q-val').innerText = Math.round(q).toLocaleString('id-ID');
+}
+
+function resetSim() {
+    mixing = false;
+    progress = 0;
+    graphPoints = [];
+    document.getElementById('mix-btn').disabled = false;
+    document.getElementById('tc-val').innerText = "--";
+    document.getElementById('q-val').innerText = "--";
+}
+
+function draw() {
+    background(15, 15, 30);
+    
+    if (!mixing) updateParams();
+
+    let beakerY = 220;
+    let beakerW = 80;
+    let beakerH = 120;
+    
+    // Posisi Gelas
+    let xHot = width * 0.2;
+    let xMix = width * 0.5;
+    let xCold = width * 0.8;
+
+    // Animasi Progress
+    if (mixing && progress < 1) {
+        progress += animSpeed;
+    }
+
+    // --- DRAW BEAKERS ---
+    
+    // 1. Gelas Air Panas (Kiri)
+    drawBeaker(xHot, beakerY, beakerW, beakerH, m1 * (1 - progress), color(231, 76, 60), t1, "PANAS");
+    
+    // 2. Gelas Air Dingin (Kanan)
+    drawBeaker(xCold, beakerY, beakerW, beakerH, m2 * (1 - progress), color(52, 152, 219), t2, "DINGIN");
+    
+    // 3. Gelas Campuran (Tengah)
+    let currentT = lerp( (t1*m1 + t2*m2)/(m1+m2), tc, progress); // Sederhana untuk visual
+    if (!mixing) currentT = 0;
+    let mixCol = lerpColor(color(52, 152, 219), color(231, 76, 60), map(currentT, t2, t1, 0, 1));
+    drawBeaker(xMix, beakerY, beakerW * 1.5, beakerH, (m1 + m2) * progress, mixCol, currentT, "CAMPURAN");
+
+    // Efek Menuang
+    if (mixing && progress < 0.9) {
+        strokeWeight(4);
+        stroke(231, 76, 60, 150);
+        line(xHot + 20, beakerY - 50, xMix - 30, beakerY - 50);
+        stroke(52, 152, 219, 150);
+        line(xCold - 20, beakerY - 50, xMix + 30, beakerY - 50);
+    }
+
+    drawGraph();
+}
+
+function drawBeaker(x, y, w, h, volume, col, temp, label) {
+    push();
+    translate(x, y);
+    
+    // Cairan
+    noStroke();
+    fill(col);
+    let liquidH = map(volume, 0, 1000, 0, h - 10);
+    rect(-w/2 + 4, h/2 - liquidH - 2, w - 8, liquidH, 0, 0, 5, 5);
+    
+    // Tabung Gelas
+    stroke(200);
+    strokeWeight(3);
+    noFill();
+    rect(-w/2, -h/2, w, h, 0, 0, 10, 10);
+    
+    // Skala Volume (ml)
+    stroke(200, 100);
+    strokeWeight(1);
+    for (let i = 0; i <= 500; i += 100) {
+        let sy = map(i, 0, 500, h/2 - 2, -h/2 + 20);
+        line(-w/2, sy, -w/2 + 10, sy);
+    }
+
+    // Label Nilai
+    fill(255);
+    noStroke();
+    textAlign(CENTER);
+    textSize(12);
+    text(Math.round(volume) + " mL", 0, h/2 + 20);
+    textSize(10);
+    fill(44, 201, 240);
+    text(label, 0, -h/2 - 10);
+    
+    if (volume > 5) {
+        fill(255);
+        textSize(14);
+        textStyle(BOLD);
+        text(Math.round(temp) + "°C", 0, h/2 - liquidH/2 + 5);
+    }
+    pop();
+}
+
+function drawGraph() {
+    let gx = 100;
+    let gy = height - 60;
+    let gW = width - 160;
+    let gH = 180;
+
+    // Sumbu
+    stroke(255, 150);
+    strokeWeight(2);
+    line(gx, gy, gx + gW, gy); // X: Waktu
+    line(gx, gy, gx, gy - gH); // Y: Suhu
+
+    // Label Sumbu
+    fill(200);
+    noStroke();
+    textAlign(CENTER);
+    textSize(11);
+    text("Waktu (t) →", gx + gW / 2, gy + 40);
+    
+    push();
+    translate(gx - 60, gy - gH / 2);
+    rotate(-HALF_PI);
+    text("Suhu (°C) →", 0, 0);
+    pop();
+
+    // Nilai Skala Y (Suhu 0 - 100)
+    textAlign(RIGHT);
+    for (let i = 0; i <= 100; i += 20) {
+        let yPos = map(i, 0, 100, gy, gy - gH);
+        stroke(255, 30);
+        line(gx, yPos, gx + gW, yPos);
+        noStroke();
+        text(i, gx - 10, yPos + 4);
+    }
+
+    // Plot Grafik
+    if (mixing) {
+        let xPos = map(progress, 0, 1, gx, gx + gW);
+        let yHot = map(lerp(t1, tc, progress), 0, 100, gy, gy - gH);
+        let yCold = map(lerp(t2, tc, progress), 0, 100, gy, gy - gH);
+        
+        if (graphPoints.length === 0 || xPos > graphPoints[graphPoints.length-1].x) {
+            graphPoints.push({x: xPos, yh: yHot, yc: yCold});
+        }
+    }
+
+    noFill();
+    strokeWeight(3);
+    
+    // Garis Air Panas
+    stroke(231, 76, 60);
+    beginShape();
+    graphPoints.forEach(p => vertex(p.x, p.yh));
+    endShape();
+
+    // Garis Air Dingin
+    stroke(52, 152, 219);
+    beginShape();
+    graphPoints.forEach(p => vertex(p.x, p.yc));
+    endShape();
+
+    // Penanda Suhu Setimbang (Tc)
+    if (progress >= 1) {
+        let finalY = map(tc, 0, 100, gy, gy - gH);
+        stroke(241, 196, 15);
+        strokeWeight(1);
+        drawingContext.setLineDash([5, 5]);
+        line(gx, finalY, gx + gW, finalY);
+        drawingContext.setLineDash([]);
+        
+        fill(241, 196, 15);
+        noStroke();
+        textAlign(LEFT);
+        text("Tc = " + tc.toFixed(2) + "°C", gx + gW + 5, finalY + 4);
+    }
+}
+</script>

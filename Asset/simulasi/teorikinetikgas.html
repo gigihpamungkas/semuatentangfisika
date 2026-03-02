@@ -1,214 +1,262 @@
-    <title>Simulasi Teori Kinetik Gas - Portal Fisika As-Syifa</title>
+
+    <title>Gas Ideal Responsive - As-Syifa</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .main-container { max-width: 900px; width: 100%; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
-        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .main-container { 
+            width: 98%; /* Mengikuti lebar layar */
+            max-width: 1100px; 
+            background: #16213e; 
+            padding: 15px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            border: 1px solid #0f3460; 
+        }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 15px; font-size: 1.5rem; text-transform: uppercase; }
         
-        .control-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; background: #0f3460; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
-        .control-group { display: flex; flex-direction: column; }
-        label { font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #e94560; }
+        .control-panel { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 10px; 
+            background: #0f3460; 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-bottom: 15px; 
+        }
+        label { font-size: 11px; font-weight: bold; color: #e94560; display: block; margin-bottom: 5px; }
         input[type=range] { width: 100%; cursor: pointer; accent-color: #e94560; }
         
-        #canvas-holder { position: relative; border-radius: 15px; overflow: hidden; display: flex; justify-content: center; background: #000; border: 2px solid #4cc9f0; }
+        #canvas-holder { 
+            border-radius: 12px; 
+            overflow: hidden; 
+            background: #000; 
+            border: 2px solid #4cc9f0; 
+            width: 100%; /* Lebar otomatis */
+            height: auto; 
+        }
         
-        .stats-display { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
-        .stat-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 3px solid #4cc9f0; }
-        .stat-label { font-size: 12px; color: #888; display: block; margin-bottom: 5px; }
-        .stat-value { font-size: 1.4rem; font-weight: bold; color: #4cc9f0; }
-        .unit { font-size: 0.8rem; color: #aaa; margin-left: 4px; }
+        .stats-display { display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 15px; gap: 10px; }
+        .stat-card { background: #1a1a2e; padding: 10px; border-radius: 10px; text-align: center; flex: 1; min-width: 120px; border-bottom: 3px solid #4cc9f0; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; color: #4cc9f0; display: block; }
+        .unit { font-size: 0.7rem; color: #aaa; }
     </style>
 
+
 <div class="main-container">
-    <h2>Teori Kinetik Gas</h2>
+    <h2>Teori Kinetik Gas & Grafik P-V</h2>
     
     <div class="control-panel">
-        <div class="control-group">
+        <div>
             <label>Suhu (T): <span id="t-label">300</span> K</label>
             <input type="range" id="t-slider" min="100" max="1000" value="300">
         </div>
-        <div class="control-group">
-            <label>Tinggi Piston (V): <span id="v-label">200</span> px</label>
-            <input type="range" id="v-slider" min="80" max="350" value="200">
+        <div>
+            <label>Volume (V): <span id="v-label">200</span> px</label>
+            <input type="range" id="v-slider" min="100" max="350" value="200">
         </div>
-        <div class="control-group">
-            <label>Jumlah Partikel (n): <span id="n-label">50</span></label>
-            <input type="range" id="n-slider" min="10" max="150" value="50">
+        <div>
+            <label>Partikel (n): <span id="n-label">50</span></label>
+            <input type="range" id="n-slider" min="10" max="100" value="50">
         </div>
     </div>
 
     <div id="canvas-holder"></div>
 
     <div class="stats-display">
-        <div class="stat-card">
-            <span class="stat-label">Tekanan (P)</span>
-            <span id="p-val" class="stat-value">0.00</span><span class="unit">Pa</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Volume (V)</span>
-            <span id="v-val-display" class="stat-value">0.00</span><span class="unit">m³</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Suhu (T)</span>
-            <span id="t-val-display" class="stat-value">300</span><span class="unit">K</span>
-        </div>
+        <div class="stat-card"><span id="p-val" class="stat-value">0.00</span><span class="unit">Pascal (P)</span></div>
+        <div class="stat-card"><span id="v-val-display" class="stat-value">0.00</span><span class="unit">m³ (V)</span></div>
+        <div class="stat-card"><span id="t-val-display" class="stat-value">300</span><span class="unit">Kelvin (T)</span></div>
     </div>
 </div>
 
 <script>
 let particles = [];
-let tSlider, vSlider, nSlider;
 let collisionCount = 0;
 let pressureValue = 0;
 let lastCheckTime = 0;
+let graphPoints = []; 
 
 function setup() {
     let container = document.getElementById('canvas-holder');
-    let canvas = createCanvas(container.offsetWidth, 450);
+    // Membuat canvas mengikuti lebar kontainer
+    let canvas = createCanvas(container.offsetWidth, 500);
     canvas.parent('canvas-holder');
-    
-    tSlider = select('#t-slider');
-    vSlider = select('#v-slider');
-    nSlider = select('#n-slider');
-    
     initParticles();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 500);
 }
 
 function initParticles() {
     particles = [];
-    let count = parseInt(nSlider.value());
+    let count = parseInt(document.getElementById('n-slider').value);
     for (let i = 0; i < count; i++) {
         particles.push(new Particle());
     }
 }
 
 function draw() {
-    background(10, 10, 25);
+    background(15, 15, 30);
     
-    let temp = parseFloat(tSlider.value());
-    let vHeight = parseFloat(vSlider.value());
-    let targetN = parseInt(nSlider.value());
+    let temp = parseFloat(document.getElementById('t-slider').value);
+    let vHeight = parseFloat(document.getElementById('v-slider').value);
+    let targetN = parseInt(document.getElementById('n-slider').value);
     
-    // Update labels
-    select('#t-label').html(temp);
-    select('#v-label').html(vHeight);
-    select('#n-label').html(targetN);
-    select('#t-val-display').html(temp);
-    
-    // Sinkronisasi jumlah partikel
+    document.getElementById('t-label').innerText = temp;
+    document.getElementById('v-label').innerText = vHeight;
+    document.getElementById('n-label').innerText = targetN;
+    document.getElementById('t-val-display').innerText = temp;
+    document.getElementById('v-val-display').innerText = (vHeight/100).toFixed(2);
+
     if (particles.length !== targetN) initParticles();
 
-    drawEnvironment(vHeight, temp);
+    // Dinamis menentukan posisi tabung (di kiri) dan grafik (di kanan)
+    let tubeX = width * 0.3;
+    let graphX = width * 0.65;
     
-    // Update dan Tampilkan Partikel
+    drawEnvironment(tubeX, vHeight, temp);
+    
     for (let p of particles) {
-        p.update(temp, vHeight);
+        p.update(tubeX, temp, vHeight);
         p.show();
     }
 
-    // Hitung Tekanan (P = nRT / V)
-    // Dalam simulasi ini kita menggunakan frekuensi tumbukan sebagai basis
     if (millis() - lastCheckTime > 500) {
-        pressureValue = (collisionCount * temp) / (vHeight * 5);
+        pressureValue = (collisionCount * temp) / (vHeight * 4);
+        graphPoints.push({v: vHeight, p: pressureValue});
+        if (graphPoints.length > 80) graphPoints.shift();
         collisionCount = 0;
         lastCheckTime = millis();
     }
-    
-    select('#p-val').html(pressureValue.toFixed(2));
-    select('#v-val-display').html((vHeight/100).toFixed(2));
+    document.getElementById('p-val').innerText = pressureValue.toFixed(2);
+
+    drawPVGraph(graphX);
 }
 
-function drawEnvironment(vH, temp) {
-    let centerX = width / 2;
-    let tubeWidth = 300;
-    let bottomY = height - 50;
+function drawEnvironment(tx, vH, temp) {
+    let tubeW = width * 0.25;
+    if (tubeW > 240) tubeW = 240; // Batasi lebar maksimal
+    let bottomY = height - 80;
     let topY = bottomY - vH;
 
-    // 1. Gambar Api dibawah tabung (berubah intensitas sesuai suhu)
-    let fireIntensity = map(temp, 100, 1000, 5, 25);
-    noStroke();
+    // Api
+    let fireH = map(temp, 100, 1000, 10, 50);
     for (let i = 0; i < 10; i++) {
-        fill(255, 100 + i * 15, 0, 150);
-        ellipse(centerX - 50 + i * 12, bottomY + 20 + random(-5, 5), fireIntensity, fireIntensity * 2);
+        fill(255, 100 + i * 15, 0, 180);
+        noStroke();
+        ellipse(tx - tubeW/2 + (i * (tubeW/10)) + 10, bottomY + 25, fireH, fireH * 1.5);
     }
 
-    // 2. Gambar Tabung Kaca (Casing)
-    noFill();
-    stroke(255, 100);
+    // Tabung
+    stroke(76, 201, 240, 150);
     strokeWeight(4);
-    line(centerX - tubeWidth/2, 50, centerX - tubeWidth/2, bottomY); // Kiri
-    line(centerX + tubeWidth/2, 50, centerX + tubeWidth/2, bottomY); // Kanan
-    line(centerX - tubeWidth/2, bottomY, centerX + tubeWidth/2, bottomY); // Bawah
+    noFill();
+    line(tx - tubeW/2, 50, tx - tubeW/2, bottomY); 
+    line(tx + tubeW/2, 50, tx + tubeW/2, bottomY); 
+    line(tx - tubeW/2, bottomY, tx + tubeW/2, bottomY); 
     
-    // Efek Kaca Biru Transparan
     fill(76, 201, 240, 20);
     noStroke();
-    rect(centerX - tubeWidth/2, topY, tubeWidth, vH);
+    rect(tx - tubeW/2, topY, tubeW, vH);
 
-    // 3. Gambar Piston (Penutup Atas)
-    fill(100);
-    stroke(200);
-    strokeWeight(2);
-    rect(centerX - tubeWidth/2 - 5, topY - 15, tubeWidth + 10, 20, 5); // Kepala Piston
+    // Piston
+    fill(120); stroke(200); strokeWeight(2);
+    rect(tx - tubeW/2 - 5, topY - 15, tubeW + 10, 20, 5); 
+    fill(180); 
+    rect(tx - 8, 0, 16, topY - 15); 
+}
+
+function drawPVGraph(gx) {
+    let gy = 400;
+    let gW = width * 0.28;
+    let gH = 320;
+    if (gW < 150) gW = 150; // Batasi lebar minimal agar angka terbaca
+
+    // Sumbu
+    stroke(255, 200); strokeWeight(2);
+    line(gx, gy, gx + gW, gy); 
+    line(gx, gy, gx, gy - gH); 
     
-    // Gagang Piston
-    fill(150);
-    rect(centerX - 10, 0, 20, topY - 15);
+    fill(255); noStroke(); textSize(12); textAlign(CENTER);
+    text("V (m³)", gx + gW / 2, gy + 45);
+    
+    push();
+    translate(gx - 45, gy - gH / 2);
+    rotate(-HALF_PI);
+    text("P (Pa)", 0, 0);
+    pop();
+
+    // Skala X
+    textSize(10);
+    for (let i = 0; i <= 5; i++) {
+        let xVal = 1.0 + i * 0.5;
+        let xPos = map(xVal * 100, 100, 350, gx + gW, gx); 
+        text(xVal.toFixed(1), xPos, gy + 15);
+    }
+
+    // Skala Y
+    textAlign(RIGHT);
+    for (let j = 0; j <= 5; j++) {
+        let yVal = j * 12;
+        let yPos = map(yVal, 0, 60, gy, gy - gH);
+        text(yVal, gx - 10, yPos + 4);
+    }
+
+    // Kurva
+    noFill(); stroke(233, 69, 96); strokeWeight(3);
+    beginShape();
+    for (let pt of graphPoints) {
+        let vx = map(pt.v, 100, 350, gx + gW, gx); 
+        let py = map(pt.p, 0, 60, gy, gy - gH);
+        vertex(vx, py);
+    }
+    endShape();
+
+    // Titik Aktual
+    let curV = parseFloat(document.getElementById('v-slider').value);
+    let dotX = map(curV, 100, 350, gx + gW, gx);
+    let dotY = map(pressureValue, 0, 60, gy, gy - gH);
+    fill(255, 255, 0); circle(dotX, dotY, 10);
 }
 
 class Particle {
     constructor() {
-        this.reset();
-        this.x = random(width/2 - 140, width/2 + 140);
-        this.y = random(height - 200, height - 60);
+        this.reset(width * 0.3);
     }
 
-    reset() {
-        this.vx = random([-1, 1]) * random(0.5, 2);
-        this.vy = random([-1, 1]) * random(0.5, 2);
+    reset(tx) {
+        this.x = random(tx - 50, tx + 50);
+        this.y = random(250, 400);
+        this.vx = random([-1, 1]) * random(1, 2);
+        this.vy = random([-1, 1]) * random(1, 2);
     }
 
-    update(temp, vH) {
-        let speedMult = map(temp, 100, 1000, 0.5, 3);
+    update(tx, temp, vH) {
+        let speedMult = map(temp, 100, 1000, 0.5, 4.5);
         this.x += this.vx * speedMult;
         this.y += this.vy * speedMult;
 
-        let tubeLeft = width / 2 - 150;
-        let tubeRight = width / 2 + 150;
-        let tubeBottom = height - 50;
-        let tubeTop = tubeBottom - vH;
+        let tubeW = width * 0.25;
+        if (tubeW > 240) tubeW = 240;
+        let left = tx - tubeW/2;
+        let right = tx + tubeW/2;
+        let bottom = height - 80;
+        let top = bottom - vH;
 
-        // Tumbukan Dinding Kiri/Kanan
-        if (this.x < tubeLeft + 5 || this.x > tubeRight - 5) {
-            this.vx *= -1;
-            collisionCount++;
-        }
-
-        // Tumbukan Bawah
-        if (this.y > tubeBottom - 5) {
-            this.vy *= -1;
-            this.y = tubeBottom - 5;
-            collisionCount++;
-        }
-
-        // Tumbukan Piston (Atas)
-        if (this.y < tubeTop + 5) {
-            this.vy *= -1;
-            this.y = tubeTop + 5;
-            collisionCount++;
-        }
+        if (this.x < left + 5 || this.x > right - 5) { this.vx *= -1; collisionCount++; }
+        if (this.y > bottom - 5) { this.vy *= -1; this.y = bottom - 5; collisionCount++; }
+        if (this.y < top + 5) { this.vy *= -1; this.y = top + 5; collisionCount++; }
+        
+        // Jaga partikel tetap di dalam jika layar berubah drastis
+        this.x = constrain(this.x, left + 5, right - 5);
+        this.y = constrain(this.y, top + 5, bottom - 5);
     }
 
     show() {
-        noStroke();
-        // Warna berubah jadi merah jika suhu tinggi
-        let r = map(dist(0,0,this.vx,this.vy), 0, 5, 100, 255);
-        fill(r, 200, 255);
+        fill(76, 201, 240); noStroke();
         circle(this.x, this.y, 8);
-        
-        // Efek Glow sederhana
-        fill(r, 200, 255, 50);
-        circle(this.x, this.y, 12);
     }
 }
 </script>

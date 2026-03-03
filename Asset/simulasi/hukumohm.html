@@ -1,0 +1,228 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .control-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; background: #0f3460; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .control-group { background: #1a1a2e; padding: 15px; border-radius: 10px; border-top: 4px solid #4cc9f0; }
+        label { font-size: 12px; font-weight: bold; display: block; margin-bottom: 8px; color: #aaa; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #4cc9f0; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .stats-display { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .stat-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #4cc9f0; }
+        .stat-value { font-size: 1.8rem; font-weight: bold; color: #f1c40f; display: block; }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Hukum Ohm</h2>
+    
+    <div class="control-panel">
+        <div class="control-group">
+            <label>Tegangan (V): <span id="v-label" style="color:#e94560">9.0</span> V</label>
+            <input type="range" id="v-slider" min="1.5" max="24" step="0.5" value="9">
+        </div>
+        <div class="control-group">
+            <label>Hambatan (R): <span id="r-label" style="color:#f1c40f">500</span> Ω</label>
+            <input type="range" id="r-slider" min="10" max="1000" step="10" value="500">
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div class="stats-display">
+        <div class="stat-card">
+            <span>Pembacaan Alat Ukur (I)</span>
+            <span id="i-val" class="stat-value">0.018</span>
+            <span style="font-size: 0.8rem; color: #888;">Ampere</span>
+        </div>
+        <div class="stat-card">
+            <span>Daya Disipasi (P)</span>
+            <span id="p-val" class="stat-value">0.162</span>
+            <span style="font-size: 0.8rem; color: #888;">Watt</span>
+        </div>
+    </div>
+</div>
+
+<script>
+let electrons = [];
+let v, r, i;
+const totalPool = 250;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 480);
+    canvas.parent('canvas-holder');
+    
+    let w = width * 0.75;
+    let h = 220;
+    let cx = width / 2;
+    let cy = height / 2;
+    let margin = 9;
+
+    for (let j = 0; j < totalPool; j++) {
+        let side = floor(random(4));
+        let ex, ey;
+        if (side === 0) { ex = random(cx - w/2 + margin, cx + w/2 - margin); ey = cy - h/2 + margin; }
+        else if (side === 1) { ex = cx + w/2 - margin; ey = random(cy - h/2 + margin, cy + h/2 - margin); }
+        else if (side === 2) { ex = random(cx - w/2 + margin, cx + w/2 - margin); ey = cy + h/2 - margin; }
+        else { ex = cx - w/2 + margin; ey = random(cy - h/2 + margin, cy + h/2 - margin); }
+        electrons.push({ x: ex, y: ey, alive: false });
+    }
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 480);
+}
+
+function draw() {
+    background(10, 12, 25);
+    
+    v = parseFloat(document.getElementById('v-slider').value);
+    r = parseFloat(document.getElementById('r-slider').value);
+    i = v / r;
+
+    document.getElementById('v-label').innerText = v.toFixed(1);
+    document.getElementById('r-label').innerText = r;
+    document.getElementById('i-val').innerText = i.toFixed(3);
+    document.getElementById('p-val').innerText = (v * i).toFixed(3);
+
+    drawCircuitStructure();
+    drawRealisticBattery();
+    drawRealisticResistor();
+    drawSideAmmeter();
+    updateElectronDensity();
+}
+
+function drawCircuitStructure() {
+    let cx = width / 2;
+    let cy = height / 2;
+    let w = width * 0.75;
+    let h = 220;
+
+    stroke(100, 70); 
+    strokeWeight(18);
+    noFill();
+    rect(cx - w/2, cy - h/2, w, h, 15);
+}
+
+function drawRealisticBattery() {
+    let cx = width / 2;
+    let cy = height / 2 + 110;
+    let bw = 120, bh = 50;
+
+    push();
+    translate(cx, cy);
+    fill(40); noStroke();
+    rect(-bw/2, -bh/2, bw, bh, 5);
+    fill(233, 69, 96);
+    rect(bw/2 - 12, -bh/2, 12, bh, 0, 5, 5, 0);
+    fill(255); textAlign(CENTER, CENTER); textStyle(BOLD); text("+", bw/2 - 6, 0);
+    fill(20);
+    rect(-bw/2, -bh/2, 12, bh, 5, 0, 0, 5);
+    fill(255); text("-", -bw/2 + 6, 0);
+    fill(255); textSize(14); textStyle(NORMAL);
+    text(v.toFixed(1) + " V", 0, 0);
+    pop();
+}
+
+function drawRealisticResistor() {
+    let cx = width / 2;
+    let cy = height / 2 - 110;
+    let rw = 100, rh = 30;
+
+    push();
+    translate(cx, cy);
+    noStroke();
+    fill(245, 240, 220);
+    rect(-rw/2, -rh/2, rw, rh, 8);
+    
+    let colors = [color(139, 69, 19), color(0), color(0), color(139, 69, 19)];
+    if (r >= 100 && r < 500) colors[2] = color(160, 82, 45); 
+    else if (r >= 500) colors[2] = color(255, 0, 0); 
+
+    for(let j=0; j<4; j++) {
+        fill(colors[j]);
+        let px = map(j, 0, 3, -rw/2 + 15, rw/2 - 15);
+        rect(px - 4, -rh/2, 8, rh);
+    }
+    fill(0, 150); textAlign(CENTER, CENTER); textSize(11); textStyle(BOLD);
+    text(r + "Ω", 0, 0);
+    pop();
+}
+
+function drawSideAmmeter() {
+    let cx = width / 2 + (width * 0.75 / 2); // Di sisi KANAN sirkuit
+    let cy = height / 2;
+    let aw = 80, ah = 100;
+
+    push();
+    translate(cx, cy);
+    
+    // Body Amperemeter
+    fill(30, 30, 50);
+    stroke(120);
+    strokeWeight(2);
+    rect(-aw/2, -ah/2, aw, ah, 10);
+
+    // Layar LCD
+    fill(10, 30, 10);
+    noStroke();
+    rect(-aw/2 + 8, -ah/2 + 15, aw - 16, 35, 4);
+
+    // Digital Value
+    fill(50, 255, 50);
+    textAlign(CENTER, CENTER);
+    textSize(18);
+    text(i.toFixed(3) + " A", 0, -ah/2 + 32);
+
+    // Terminal Input
+    fill(200);
+    circle(0, ah/2 - 20, 10);
+    fill(255);
+    textSize(10);
+    text("AMPERE", 0, ah/2 - 35);
+    pop();
+}
+
+function updateElectronDensity() {
+    let targetActive = map(i, 0, 2.4, 5, totalPool);
+    let speed = map(i, 0, 2.4, 0.2, 18);
+    
+    let cx = width / 2;
+    let cy = height / 2;
+    let w = width * 0.75;
+    let h = 220;
+    let margin = 9;
+
+    fill(76, 201, 240);
+    noStroke();
+
+    for (let j = 0; j < totalPool; j++) {
+        let e = electrons[j];
+        e.alive = (j < targetActive);
+
+        if (e.alive) {
+            ellipse(e.x, e.y, 6, 6);
+
+            // Gerak berlawanan jarum jam (Elektron ke Kutub +)
+            if (e.y <= cy - h/2 + margin && e.x > cx - w/2 + margin) { 
+                e.x -= speed;
+                if (e.x < cx - w/2 + margin) e.y += speed; 
+            } else if (e.x <= cx - w/2 + margin && e.y < cy + h/2 - margin) { 
+                e.y += speed;
+                if (e.y > cy + h/2 - margin) e.x += speed;
+            } else if (e.y >= cy + h/2 - margin && e.x < cx + w/2 - margin) { 
+                e.x += speed;
+                if (e.x > cx + w/2 - margin) e.y -= speed;
+            } else if (e.x >= cx + w/2 - margin && e.y > cy - h/2 + margin) { 
+                e.y -= speed;
+                if (e.y < cy - h/2 + margin) e.x -= speed;
+            }
+        }
+    }
+}
+</script>

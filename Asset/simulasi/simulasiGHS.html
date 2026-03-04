@@ -1,0 +1,231 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1150px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #0f3460; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .control-group { background: #1a1a2e; padding: 15px; border-radius: 10px; border-top: 4px solid #f1c40f; text-align: center; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 8px; color: #aaa; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #4cc9f0; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; cursor: grab; position: relative; }
+        
+        .btn { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; color: white; margin-top: 5px; }
+        .btn-reset { background: #e94560; }
+        .btn-reset:hover { background: #ff5e78; }
+        .btn-pause { background: #4cc9f0; color: #1a1a2e; }
+        .btn-pause:hover { background: #43b3d5; }
+        
+        .instruction { text-align: center; font-size: 0.85rem; color: #4cc9f0; margin-top: 10px; font-style: italic; }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Gerak Harmonis Sederhana</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Massa (m): <span id="m-label" style="color:#f1c40f">2.0</span> kg</label>
+            <input type="range" id="m-slider" min="1.0" max="10.0" step="0.1" value="2.0">
+        </div>
+        <div class="control-group">
+            <label>Konstanta (k): <span id="k-label" style="color:#2ecc71">20</span> N/m</label>
+            <input type="range" id="k-slider" min="5" max="100" step="1" value="20">
+        </div>
+        <div class="control-group">
+            <button id="pause-btn" class="btn btn-pause" onclick="togglePause()">PAUSE</button>
+        </div>
+        <div class="control-group">
+            <button class="btn btn-reset" onclick="resetSim()">RESET</button>
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    <p class="instruction">Gunakan tombol PAUSE untuk membekukan gerakan dan menganalisis titik pada grafik.</p>
+</div>
+
+<script>
+let m, k;
+let equilibriumY = 220; 
+let currentY, velocity = 0;
+let graphPoints = [];
+let isDragging = false;
+let isOscillating = false;
+let isPaused = false;
+let timeStep = 0.015; 
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 520);
+    canvas.parent('canvas-holder');
+    resetSim();
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pause-btn').innerText = isPaused ? "RESUME" : "PAUSE";
+    document.getElementById('pause-btn').style.background = isPaused ? "#2ecc71" : "#4cc9f0";
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 520);
+}
+
+function resetSim() {
+    currentY = equilibriumY;
+    velocity = 0;
+    isDragging = false;
+    isOscillating = false;
+    isPaused = false;
+    graphPoints = [];
+    document.getElementById('pause-btn').innerText = "PAUSE";
+    document.getElementById('pause-btn').style.background = "#4cc9f0";
+}
+
+function draw() {
+    background(10, 12, 25);
+    
+    m = parseFloat(document.getElementById('m-slider').value);
+    k = parseFloat(document.getElementById('k-slider').value);
+    document.getElementById('m-label').innerText = m.toFixed(1);
+    document.getElementById('k-label').innerText = k;
+
+    if (!isPaused) {
+        updatePhysics();
+    }
+    
+    drawApparatus();
+    drawGraph();
+    
+    if (isPaused) {
+        fill(255, 200);
+        noStroke();
+        textAlign(CENTER);
+        textSize(20);
+        text("⏸ SIMULASI DIHENTIKAN", width/2, height - 30);
+    }
+}
+
+function updatePhysics() {
+    if (isDragging) {
+        currentY = constrain(mouseY, 70, 450);
+        velocity = 0;
+        isOscillating = true; 
+    } else if (isOscillating) {
+        for(let i=0; i<5; i++) {
+            let displacement = currentY - equilibriumY;
+            let force = -k * displacement;
+            let acceleration = force / m;
+            velocity += acceleration * (timeStep/5);
+            currentY += velocity * (timeStep/5);
+        }
+        velocity *= 0.9996; 
+    }
+    
+    if (isOscillating || isDragging) {
+        graphPoints.push(currentY - equilibriumY);
+        if (graphPoints.length > 1000) graphPoints.shift();
+    }
+}
+
+function drawApparatus() {
+    let cx = width * 0.22;
+    let topY = 20;
+
+    stroke(180); strokeWeight(10);
+    line(cx - 70, topY, cx + 70, topY);
+
+    stroke(200); strokeWeight(3); noFill();
+    beginShape();
+    let coils = 35; 
+    for (let i = 0; i <= coils; i++) {
+        let y = map(i, 0, coils, topY, currentY);
+        let x = cx + (i % 2 === 0 ? 25 : -25);
+        if (i === 0 || i === coils) x = cx;
+        vertex(x, y);
+    }
+    endShape();
+
+    stroke(76, 201, 240, 100); strokeWeight(1);
+    drawingContext.setLineDash([12, 6]);
+    line(cx - 80, equilibriumY, cx + width, equilibriumY);
+    drawingContext.setLineDash([]);
+
+    let boxSize = map(m, 1, 10, 50, 90);
+    fill(isDragging ? '#e94560' : '#2ecc71');
+    stroke(255); strokeWeight(2);
+    rect(cx - boxSize/2, currentY, boxSize, boxSize, 10);
+    
+    fill(255); noStroke(); textAlign(CENTER, CENTER); textSize(14);
+    text(m.toFixed(1) + "kg", cx, currentY + boxSize/2);
+}
+
+function drawGraph() {
+    let gx = width * 0.45;
+    let gy = equilibriumY; 
+    let gW = width * 0.5;
+    let gH = 180;
+
+    stroke(255, 30); strokeWeight(1);
+    textAlign(RIGHT, CENTER);
+    textSize(10);
+    for (let val = -150; val <= 150; val += 50) {
+        let py = gy + val;
+        line(gx, py, gx + gW, py);
+        noStroke();
+        fill(200);
+        text(val, gx - 10, py);
+        stroke(255, 30);
+    }
+
+    for (let i = 0; i <= 1000; i += 200) {
+        let px = map(i, 0, 1000, gx, gx + gW);
+        line(px, gy - gH, px, gy + gH);
+        noStroke();
+        fill(200);
+        textAlign(CENTER);
+        text(i, px, gy + gH + 15);
+        stroke(255, 30);
+    }
+
+    stroke(255, 180); strokeWeight(2);
+    line(gx, gy - gH, gx, gy + gH); 
+    line(gx, gy, gx + gW, gy); 
+
+    fill(43, 179, 213); noStroke(); textAlign(LEFT); textSize(14);
+    text("y (Simpangan)", gx + 10, gy - gH - 10);
+    textAlign(RIGHT);
+    text("t (Waktu/Indeks)", gx + gW, gy + gH + 20);
+
+    noFill(); stroke(241, 196, 15); strokeWeight(3);
+    beginShape();
+    for (let i = 0; i < graphPoints.length; i++) {
+        let vx = map(i, 0, 1000, gx, gx + gW);
+        let vy = gy + graphPoints[i];
+        if (vy > gy - gH && vy < gy + gH) vertex(vx, vy);
+    }
+    endShape();
+    
+    if (graphPoints.length > 0) {
+        fill(255, 69, 96);
+        let lastX = map(graphPoints.length - 1, 0, 1000, gx, gx + gW);
+        let lastY = gy + graphPoints[graphPoints.length - 1];
+        ellipse(lastX, lastY, 12, 12);
+    }
+}
+
+function mousePressed() {
+    if (isPaused) return; // Tidak bisa drag jika sedang pause
+    let cx = width * 0.22;
+    let boxSize = map(m, 1, 10, 50, 90);
+    if (mouseX > cx - boxSize/2 && mouseX < cx + boxSize/2 && 
+        mouseY > currentY && mouseY < currentY + boxSize) {
+        isDragging = true;
+    }
+}
+
+function mouseReleased() {
+    isDragging = false;
+}
+</script>

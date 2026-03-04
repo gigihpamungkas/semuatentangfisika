@@ -1,0 +1,246 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .control-group { background: #1a1a2e; padding: 12px; border-radius: 10px; border-top: 4px solid #f1c40f; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 6px; color: #aaa; }
+        select, input[type=range] { width: 100%; cursor: pointer; background: #1a1a2e; color: #fff; border: 1px solid #4cc9f0; padding: 5px; border-radius: 4px; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-mula { background: #2ecc71; }
+        .btn-pause { background: #4cc9f0; color: #1a1a2e; }
+        .btn-reset { background: #e94560; }
+        .btn:hover { opacity: 0.8; transform: translateY(-2px); }
+        
+        /* Data Display Panel */
+        .data-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .data-card { background: #0f3460; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #4cc9f0; }
+        .data-label { font-size: 11px; color: #aaa; text-transform: uppercase; margin-bottom: 5px; }
+        .data-value { font-size: 1.4rem; font-weight: bold; color: #f1c40f; }
+
+        .formula-box { background: #1a1a2e; padding: 10px; border-radius: 10px; text-align: center; margin-top: 10px; border: 1px dashed #4cc9f0; font-family: 'Courier New', Courier, monospace; color: #4cc9f0; font-size: 0.8rem; }
+    </style>
+
+
+<div class="main-container">
+    <h2>Simulasi Gaya Lorentz (muatan)</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Arah Medan Magnet (B):</label>
+            <select id="b-direction" onchange="resetSim()">
+                <option value="in">Masuk Layar (X)</option>
+                <option value="out">Keluar Layar (•)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Jenis Muatan:</label>
+            <select id="type-select" onchange="resetSim()">
+                <option value="proton">Proton (+)</option>
+                <option value="elektron">Elektron (-)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Besar Muatan (q): <span id="q-label" style="color:#f1c40f">5</span> µC</label>
+            <input type="range" id="q-slider" min="1" max="5" step="1" value="5">
+        </div>
+        <div class="control-group">
+            <label>Kekuatan B: <span id="b-label" style="color:#2ecc71">5.0</span> Tesla</label>
+            <input type="range" id="b-slider" min="1" max="5" step="0.5" value="5">
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    
+    <div class="btn-group">
+        <button class="btn btn-mula" onclick="startSim()" id="run-btn">TEMBAKKAN</button>
+        <button class="btn btn-pause" onclick="togglePause()" id="pause-btn">PAUSE</button>
+        <button class="btn btn-reset" onclick="resetSim()">RESET</button>
+    </div>
+
+    <div class="data-panel">
+        <div class="data-card">
+            <div class="data-label">Gaya Lorentz (F<sub>L</sub>)</div>
+            <div id="fl-val" class="data-value">0.00 N</div>
+        </div>
+        <div class="data-card">
+            <div class="data-label">Radius Lintasan (R)</div>
+            <div id="r-val" class="data-value">0.00 m</div>
+        </div>
+    </div>
+
+    <div class="formula-box">
+        F<sub>L</sub> = q . v . B . sin(90°) | R = (m.v) / (q.B)
+    </div>
+</div>
+
+<script>
+let isRunning = false;
+let isPaused = false;
+let chargeX, chargeY, vx, vy;
+let q, bVal, bDir;
+let path = [];
+const mass = 1;
+const speedScale = 4; // Kecepatan konstan v
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 450);
+    canvas.parent('canvas-holder');
+    resetSim();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 450);
+    resetSim();
+}
+
+function resetSim() {
+    isRunning = false;
+    isPaused = false;
+    chargeX = 40;
+    chargeY = height / 2;
+    vx = speedScale; 
+    vy = 0;
+    path = [];
+    document.getElementById('pause-btn').innerText = "PAUSE";
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('fl-val').innerText = "0.00 N";
+    document.getElementById('r-val').innerText = "0.00 m";
+}
+
+function startSim() {
+    isRunning = true;
+    isPaused = false;
+    document.getElementById('run-btn').disabled = true;
+}
+
+function togglePause() {
+    if (isRunning) isPaused = !isPaused;
+    document.getElementById('pause-btn').innerText = isPaused ? "RESUME" : "PAUSE";
+}
+
+function draw() {
+    background(10, 15, 30);
+    
+    let qInput = parseFloat(document.getElementById('q-slider').value);
+    let type = document.getElementById('type-select').value;
+    q = qInput * (type === "elektron" ? -1 : 1);
+    bVal = parseFloat(document.getElementById('b-slider').value);
+    bDir = document.getElementById('b-direction').value;
+
+    document.getElementById('q-label').innerText = qInput;
+    document.getElementById('b-label').innerText = bVal.toFixed(1);
+
+    drawFieldB();
+    
+    if (isRunning && !isPaused) {
+        updatePhysics();
+    }
+    
+    drawPath();
+    drawCharge();
+}
+
+function drawFieldB() {
+    let regionX = width * 0.25;
+    fill(20, 35, 60, 150); noStroke();
+    rect(regionX, 0, width, height);
+
+    stroke(76, 201, 240, 80); strokeWeight(1.5);
+    let spacing = 50;
+    for(let x = regionX + 25; x < width; x += spacing) {
+        for(let y = 25; y < height; y += spacing) {
+            if (bDir === "in") {
+                line(x-6, y-6, x+6, y+6); line(x+6, y-6, x-6, y+6);
+            } else {
+                fill(76, 201, 240); noStroke(); circle(x, y, 4); noFill(); stroke(76, 201, 240, 80);
+            }
+            noFill(); circle(x, y, 20);
+        }
+    }
+    fill(255, 150); noStroke(); textSize(12); textAlign(LEFT);
+    text(bDir === "in" ? "B: MASUK LAYAR (X)" : "B: KELUAR LAYAR (•)", regionX + 15, 25);
+}
+
+function updatePhysics() {
+    let regionX = width * 0.25;
+    if (chargeX < regionX) {
+        chargeX += vx;
+    } else {
+        let directionFactor = (bDir === "in" ? 1 : -1);
+        
+        // Perhitungan Fisika (Kuantitatif)
+        // Kecepatan v diasumsikan speedScale (4)
+        let qReal = abs(q) * 1e-6; // Konversi µC ke Coulomb
+        let forceLorentz = qReal * speedScale * bVal;
+        let radius = (mass * speedScale) / (abs(q) * bVal * 0.015); // Skala visual jari-jari
+
+        // Update UI Data
+        document.getElementById('fl-val').innerText = forceLorentz.toExponential(2) + " N";
+        document.getElementById('r-val').innerText = radius.toFixed(2) + " m";
+
+        // Percepatan Lorentz (Visual)
+        let ax = (q * vy * bVal * directionFactor) * 0.015;
+        let ay = (-q * vx * bVal * directionFactor) * 0.015;
+
+        vx += ax;
+        vy += ay;
+
+        let speed = sqrt(vx*vx + vy*vy);
+        vx = (vx / speed) * speedScale;
+        vy = (vy / speed) * speedScale;
+
+        chargeX += vx;
+        chargeY += vy;
+    }
+    path.push({x: chargeX, y: chargeY});
+    if (path.length > 1000) path.shift();
+}
+
+function drawPath() {
+    noFill(); stroke(241, 196, 15); strokeWeight(3);
+    beginShape();
+    path.forEach(p => vertex(p.x, p.y));
+    endShape();
+}
+
+function drawCharge() {
+    if (isRunning && chargeX > width * 0.25) {
+        // Vektor Kecepatan (Hijau)
+        stroke(46, 204, 113); strokeWeight(2);
+        drawArrow(chargeX, chargeY, chargeX + vx * 15, chargeY + vy * 15);
+        
+        // Vektor Gaya Lorentz (Merah)
+        stroke(233, 69, 96);
+        let directionFactor = (bDir === "in" ? 1 : -1);
+        let fx = (chargeX < width * 0.25) ? 0 : (q * vy * bVal * directionFactor) * 10;
+        let fy = (chargeX < width * 0.25) ? 0 : (-q * vx * bVal * directionFactor) * 10;
+        drawArrow(chargeX, chargeY, chargeX + fx * 4, chargeY + fy * 4);
+    }
+
+    noStroke();
+    fill(q > 0 ? '#e94560' : '#4cc9f0');
+    ellipse(chargeX, chargeY, 25, 25);
+    fill(255); textAlign(CENTER, CENTER); textStyle(BOLD);
+    text(q > 0 ? "+" : "-", chargeX, chargeY);
+}
+
+function drawArrow(x1, y1, x2, y2) {
+    line(x1, y1, x2, y2);
+    let angle = atan2(y2 - y1, x2 - x1);
+    push();
+    translate(x2, y2);
+    rotate(angle);
+    line(0, 0, -8, -4);
+    line(0, 0, -8, 4);
+    pop();
+}
+</script>

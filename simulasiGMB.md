@@ -3,7 +3,7 @@ layout: default
 title: Gerak Melingkar Beraturan
 parent: Simulasi
 mathjax: true
-nav_order: 15
+nav_order: 16
 ---
 
 ## Simulasi Gerak Melingkar Beraturan

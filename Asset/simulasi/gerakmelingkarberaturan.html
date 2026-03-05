@@ -1,0 +1,193 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .control-group { background: #1a1a2e; padding: 12px; border-radius: 10px; border-top: 4px solid #f1c40f; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 6px; color: #aaa; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #4cc9f0; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-start { background: #2ecc71; }
+        .btn-pause { background: #4cc9f0; color: #1a1a2e; }
+        .btn-reset { background: #e94560; }
+        
+        .data-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .data-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #4cc9f0; }
+        .data-label { font-size: 10px; color: #888; text-transform: uppercase; }
+        .data-value { font-size: 1.4rem; font-weight: bold; color: #f1c40f; }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Gerak Melingkar</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Jari-jari (r): <span id="r-label" style="color:#f1c40f">100</span> px</label>
+            <input type="range" id="r-slider" min="50" max="180" value="120">
+        </div>
+        <div class="control-group">
+            <label>Kecepatan Sudut (ω): <span id="w-label" style="color:#2ecc71">2.0</span> rad/s</label>
+            <input type="range" id="w-slider" min="0" max="10" step="0.5" value="2">
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    
+    <div class="btn-group">
+        <button class="btn btn-start" onclick="togglePlay()" id="play-btn">START</button>
+        <button class="btn btn-pause" onclick="togglePause()" id="pause-btn">PAUSE</button>
+        <button class="btn btn-reset" onclick="resetSim()">RESET</button>
+    </div>
+
+    <div class="data-panel">
+        <div class="data-card">
+            <div class="data-label">Kecepatan Linear (v)</div>
+            <div id="v-val" class="data-value">0.00 m/s</div>
+        </div>
+        <div class="data-card">
+            <div class="data-label">Percepatan Sentripetal (as)</div>
+            <div id="as-val" class="data-value">0.00 m/s²</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let angle = 0;
+let isPlaying = false;
+let isPaused = false;
+let r, omega;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 450);
+    canvas.parent('canvas-holder');
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 450);
+}
+
+function togglePlay() {
+    isPlaying = true;
+    isPaused = false;
+    document.getElementById('play-btn').innerText = "RUNNING";
+    document.getElementById('pause-btn').innerText = "PAUSE";
+}
+
+function togglePause() {
+    if (isPlaying) {
+        isPaused = !isPaused;
+        document.getElementById('pause-btn').innerText = isPaused ? "RESUME" : "PAUSE";
+    }
+}
+
+function resetSim() {
+    isPlaying = false;
+    isPaused = false;
+    angle = 0;
+    document.getElementById('play-btn').innerText = "START";
+    document.getElementById('pause-btn').innerText = "PAUSE";
+}
+
+function draw() {
+    background(10, 15, 30);
+    
+    r = parseFloat(document.getElementById('r-slider').value);
+    omega = parseFloat(document.getElementById('w-slider').value);
+    
+    document.getElementById('r-label').innerText = r;
+    document.getElementById('w-label').innerText = omega.toFixed(1);
+
+    let v = omega * (r/100); // skala m/s
+    let as = (omega * omega) * (r/100);
+
+    document.getElementById('v-val').innerText = v.toFixed(2) + " m/s";
+    document.getElementById('as-val').innerText = as.toFixed(2) + " m/s²";
+
+    translate(width / 2, height / 2);
+    
+    drawBikeWheel(r);
+    
+    if (isPlaying && !isPaused) {
+        angle += omega * 0.016; // 60 fps
+    }
+
+    drawPointAndVectors(r, angle, omega);
+}
+
+function drawBikeWheel(radius) {
+    // Ban Luar
+    stroke(100); strokeWeight(15); noFill();
+    circle(0, 0, radius * 2);
+    
+    // Velg
+    stroke(200); strokeWeight(4);
+    circle(0, 0, radius * 1.9);
+
+    // Jari-jari Roda
+    strokeWeight(1); stroke(150, 150);
+    for (let i = 0; i < 12; i++) {
+        let rot = TWO_PI / 12 * i + angle;
+        line(0, 0, cos(rot) * radius * 0.95, sin(rot) * radius * 0.95);
+    }
+    
+    // Hub Pusat
+    fill(180); noStroke();
+    circle(0, 0, 20);
+}
+
+function drawPointAndVectors(radius, a, w) {
+    let x = cos(a) * radius;
+    let y = sin(a) * radius;
+
+    // Titik Pengamatan (Pentil Ban)
+    fill(241, 196, 15); stroke(0); strokeWeight(1);
+    circle(x, y, 15);
+    
+    // Label Titik
+    fill(255); noStroke(); textAlign(CENTER); textSize(10);
+    text("TITIK P", x, y - 15);
+
+    if (w > 0) {
+        // 1. Vektor Kecepatan Linear (Tangensial) - HIJAU
+        // Arahnya tegak lurus jari-jari
+        stroke(46, 204, 113); strokeWeight(3);
+        let vx = -sin(a) * 60;
+        let vy = cos(a) * 60;
+        drawArrow(x, y, x + vx, y + vy);
+        fill(46, 204, 113); noStroke(); text("v", x + vx, y + vy - 5);
+
+        // 2. Vektor Gaya/Percepatan Sentripetal - MERAH
+        // Arahnya ke pusat
+        stroke(233, 69, 96); strokeWeight(3);
+        let fx = -cos(a) * 50;
+        let fy = -sin(a) * 50;
+        drawArrow(x, y, x + fx, y + fy);
+        fill(233, 69, 96); noStroke(); text("Fs", x + fx - 10, y + fy - 5);
+
+        // 3. Visualisasi Kecepatan Sudut (Omega) - BIRU
+        noFill(); stroke(76, 201, 240, 150); strokeWeight(2);
+        arc(0, 0, 50, 50, a - 0.5, a + 0.5);
+        fill(76, 201, 240); noStroke();
+        text("ω", 30 * cos(a), 30 * sin(a));
+    }
+}
+
+function drawArrow(x1, y1, x2, y2) {
+    line(x1, y1, x2, y2);
+    let ang = atan2(y2 - y1, x2 - x1);
+    push();
+    translate(x2, y2);
+    rotate(ang);
+    line(0, 0, -8, -4);
+    line(0, 0, -8, 4);
+    pop();
+}
+</script>

@@ -1,0 +1,249 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1150px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .control-group { background: #1a1a2e; padding: 12px; border-radius: 10px; border-top: 4px solid #4cc9f0; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 6px; color: #aaa; }
+        input[type=range], select { width: 100%; cursor: pointer; background: #1a1a2e; color: #fff; border: 1px solid #4cc9f0; padding: 5px; border-radius: 5px; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; display: block; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-start { background: #2ecc71; }
+        .btn-pause { background: #4cc9f0; color: #1a1a2e; }
+        .btn-reset { background: #e94560; }
+        
+        .data-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .data-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #4cc9f0; }
+        .data-value { font-size: 1.3rem; font-weight: bold; color: #f1c40f; }
+    </style>
+
+
+<div class="main-container">
+    <h2>Simulasi Gerak Relatif Perahu </h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Kecepatan Arus (v_s): <span id="vs-label">2</span> m/s</label>
+            <input type="range" id="vs-slider" min="0" max="5" step="0.5" value="2" oninput="resetSim()">
+            <select id="vs-dir" onchange="resetSim()" style="margin-top:5px;">
+                <option value="1">Arus ke Kanan →</option>
+                <option value="-1">Arus ke Kiri ←</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Kecepatan Perahu (v_p): <span id="vp-label">3</span> m/s</label>
+            <input type="range" id="vp-slider" min="1" max="6" step="0.5" value="3" oninput="resetSim()">
+        </div>
+        <div class="control-group">
+            <label>Lebar Sungai: <span id="w-label">250</span> m</label>
+            <input type="range" id="w-slider" min="150" max="350" step="10" value="250" oninput="resetSim()">
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    
+    <div class="btn-group">
+        <button class="btn btn-start" onclick="startSim()" id="run-btn">BERANGKAT!</button>
+        <button class="btn btn-pause" onclick="togglePause()" id="pause-btn">PAUSE</button>
+        <button class="btn btn-reset" onclick="resetSim()">RESET</button>
+    </div>
+
+    <div class="data-panel">
+        <div class="data-card">
+            <div style="font-size:10px; color:#888;">RESULTAN KECEPATAN (v_r)</div>
+            <div id="vr-val" class="data-value">0.00 m/s</div>
+        </div>
+        <div class="data-card">
+            <div style="font-size:10px; color:#888;">WAKTU TEMPUH (t)</div>
+            <div id="t-val" class="data-value">0.00 s</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let boatPos, startPos, isRunning = false, isPaused = false;
+let waterOffset = 0;
+
+function setup() {
+    updateCanvasSize();
+    resetSim();
+}
+
+function updateCanvasSize() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 520);
+    canvas.parent('canvas-holder');
+}
+
+function windowResized() {
+    updateCanvasSize();
+    resetSim();
+}
+
+function resetSim() {
+    isRunning = false;
+    isPaused = false;
+    
+    let vs = parseFloat(document.getElementById('vs-slider').value) * parseFloat(document.getElementById('vs-dir').value);
+    let vp = parseFloat(document.getElementById('vp-slider').value);
+    let rw = parseFloat(document.getElementById('w-slider').value);
+
+    // LOGIKA ADAPTIF: Tentukan titik awal berdasarkan arah arus agar tidak keluar layar
+    // Jika arus ke kanan (positif), mulai dari agak kiri. Jika arus ke kiri, mulai dari agak kanan.
+    let driftEstimated = (vs / vp) * rw; // Perkiraan jarak hanyut horizontal
+    let safeMargin = 100;
+    
+    let startX;
+    if (vs > 0) {
+        startX = constrain(width/2 - driftEstimated/2, safeMargin, width/2);
+    } else if (vs < 0) {
+        startX = constrain(width/2 - driftEstimated/2, width/2, width - safeMargin);
+    } else {
+        startX = width/2;
+    }
+
+    startPos = createVector(startX, height - 80);
+    boatPos = startPos.copy();
+    
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('t-val').innerText = "0.00 s";
+    document.getElementById('pause-btn').innerText = "PAUSE";
+}
+
+function startSim() {
+    isRunning = true;
+    isPaused = false;
+    document.getElementById('run-btn').disabled = true;
+}
+
+function togglePause() {
+    if (isRunning) isPaused = !isPaused;
+    document.getElementById('pause-btn').innerText = isPaused ? "RESUME" : "PAUSE";
+}
+
+function draw() {
+    let vs = parseFloat(document.getElementById('vs-slider').value) * parseFloat(document.getElementById('vs-dir').value);
+    let vp = parseFloat(document.getElementById('vp-slider').value);
+    let rw = parseFloat(document.getElementById('w-slider').value);
+    
+    document.getElementById('vs-label').innerText = abs(vs).toFixed(1);
+    document.getElementById('vp-label').innerText = vp.toFixed(1);
+    document.getElementById('w-label').innerText = rw;
+
+    let vr = sqrt(sq(vp) + sq(vs));
+    document.getElementById('vr-val').innerText = vr.toFixed(2) + " m/s";
+
+    drawFullEnvironment(rw, vs);
+
+    if (isRunning && !isPaused) {
+        boatPos.x += vs * 0.5;
+        boatPos.y -= vp * 0.5;
+
+        // Berhenti jika sampai seberang
+        if (boatPos.y <= height - 85 - rw) {
+            boatPos.y = height - 85 - rw;
+            isRunning = false;
+            let finalTime = rw / vp;
+            document.getElementById('t-val').innerText = finalTime.toFixed(2) + " s";
+        }
+    }
+
+    drawBoat(boatPos, vp, vs, isRunning || isPaused);
+}
+
+function drawFullEnvironment(rw, vs) {
+    noStroke();
+    fill(34, 139, 34);
+    rect(-10, 0, width + 20, height); 
+
+    fill(30, 144, 255);
+    rect(-10, height - 85 - rw, width + 20, rw);
+
+    // Animasi Aliran Air
+    stroke(255, 60); strokeWeight(1.5);
+    waterOffset += vs * 1.5;
+    for (let y = height - 70 - rw; y < height - 85; y += 45) {
+        for (let x = -150; x < width + 150; x += 150) {
+            let xPos = (x + waterOffset) % (width + 300) - 150;
+            line(xPos, y, xPos + 50, y);
+        }
+    }
+
+    // Tepian Pasir
+    fill(210, 180, 140);
+    rect(-10, height - 85, width + 20, 15); 
+    rect(-10, height - 95 - rw, width + 20, 15); 
+
+    // Garis Referensi Keberangkatan (Dotted)
+    stroke(255, 150);
+    drawingContext.setLineDash([5, 5]);
+    line(startPos.x, height - 85, startPos.x, height - 85 - rw);
+    drawingContext.setLineDash([]);
+
+    // PANAH LEBAR SUNGAI
+    stroke(255); strokeWeight(2);
+    let dimX = 50;
+    line(dimX, height - 85, dimX, height - 85 - rw);
+    line(dimX, height - 85, dimX - 5, height - 95);
+    line(dimX, height - 85, dimX + 5, height - 95);
+    line(dimX, height - 85 - rw, dimX - 5, height - 85 - rw + 10);
+    line(dimX, height - 85 - rw, dimX + 5, height - 85 - rw + 10);
+    
+    push();
+    translate(dimX - 10, height - 85 - rw/2);
+    rotate(-HALF_PI);
+    fill(255); noStroke(); textAlign(CENTER); textSize(12); textStyle(BOLD);
+    text("Lebar Sungai: " + rw + " m", 0, 0);
+    pop();
+
+    // PANAH KECEPATAN ARUS (vs)
+    if (abs(vs) > 0) {
+        let arrowY = height - 85 - rw/2;
+        stroke(0, 255, 255); strokeWeight(4);
+        let arrowXStart = vs > 0 ? 100 : width - 100;
+        let arrowXEnd = arrowXStart + (vs * 25);
+        drawArrow(arrowXStart, arrowY, arrowXEnd, arrowY);
+        fill(0, 255, 255); noStroke(); textSize(14); textAlign(vs > 0 ? LEFT : RIGHT); textStyle(BOLD);
+        text("v_s: " + abs(vs).toFixed(1) + " m/s", (arrowXStart + arrowXEnd)/2, arrowY - 10);
+    }
+}
+
+function drawBoat(pos, vp, vs, showVectors) {
+    push();
+    translate(pos.x, pos.y);
+    
+    fill(101, 67, 33); stroke(0); strokeWeight(1);
+    beginShape();
+    vertex(-12, 25); vertex(12, 25); vertex(18, -10); vertex(0, -30); vertex(-18, -10);
+    endShape(CLOSE);
+
+    if (showVectors) {
+        // v_p (Kuning)
+        stroke(255, 255, 0); strokeWeight(3);
+        drawArrow(0, 0, 0, -vp * 20);
+        fill(255, 255, 0); noStroke(); textAlign(LEFT); textSize(11); textStyle(BOLD);
+        text("v_p: " + vp.toFixed(1) + " m/s", 15, -vp * 10);
+        
+        // v_r (Putih)
+        stroke(255); strokeWeight(3);
+        drawArrow(0, 0, vs * 20, -vp * 20);
+    }
+    pop();
+}
+
+function drawArrow(x1, y1, x2, y2) {
+    line(x1, y1, x2, y2);
+    let angle = atan2(y2 - y1, x2 - x1);
+    push();
+    translate(x2, y2);
+    rotate(angle);
+    line(0, 0, -10, -5);
+    line(0, 0, -10, 5);
+    pop();
+}
+</script>

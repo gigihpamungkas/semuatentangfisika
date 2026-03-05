@@ -3,7 +3,7 @@ layout: default
 title: Gerak Relatif Perahu
 parent: Simulasi
 mathjax: true
-nav_order: 16
+nav_order: 17
 ---
 
 ## Simulasi Gerak Realtif Perahu

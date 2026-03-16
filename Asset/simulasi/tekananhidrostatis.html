@@ -1,0 +1,146 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .control-group { background: #1a1a2e; padding: 12px; border-radius: 10px; border-top: 4px solid #4cc9f0; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 6px; color: #aaa; }
+        input[type=range], select { width: 100%; cursor: pointer; background: #1a1a2e; color: #fff; border: 1px solid #4cc9f0; padding: 5px; border-radius: 5px; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; position: relative; cursor: crosshair; }
+        
+        .data-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .data-card { background: #1a1a2e; padding: 15px; border-radius: 12px; text-align: center; border-bottom: 4px solid #f1c40f; }
+        .data-value { font-size: 1.5rem; font-weight: bold; color: #f1c40f; }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Tekanan Hidrostatis</h2>
+    <h3> geser sensor keatas atau kebawah untuk menentukan besar tekanan hidrostatis di ketinggian yang diinginkan</h3>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Zat Cair: <span id="rho-label">1000</span> kg/m³</label>
+            <select id="fluid-select" onchange="updateRho()">
+                <option value="1000">Air Tawar (1000 kg/m³)</option>
+                <option value="1030">Air Laut (1030 kg/m³)</option>
+                <option value="800">Minyak (800 kg/m³)</option>
+                <option value="13600">Raksa (13600 kg/m³)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Gravitasi (g): <span id="g-label">9.8</span> m/s²</label>
+            <input type="range" id="g-slider" min="1" max="20" step="0.1" value="9.8">
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div class="data-panel">
+        <div class="data-card">
+            <div style="font-size:10px; color:#888;">KEDALAMAN SENSOR (h)</div>
+            <div id="h-val" class="data-value">0.00 m</div>
+        </div>
+        <div class="data-card">
+            <div style="font-size:10px; color:#888;">TEKANAN HIDROSTATIS (Ph)</div>
+            <div id="p-val" class="data-value">0 Pa</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let sensorY, isDragging = false;
+let tankTop = 100;
+let tankBottom = 450;
+let rho = 1000;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 500);
+    canvas.parent('canvas-holder');
+    sensorY = tankTop + 50;
+}
+
+function updateRho() {
+    rho = parseFloat(document.getElementById('fluid-select').value);
+}
+
+function draw() {
+    background(20, 20, 40);
+    let g = parseFloat(document.getElementById('g-slider').value);
+    document.getElementById('g-label').innerText = g.toFixed(1);
+
+    drawTank();
+    updateSensor();
+    
+    // Perhitungan Fisika
+    // Skala: 350px = 10 meter (misal)
+    let h_real = map(sensorY, tankTop, tankBottom, 0, 10);
+    let pressure = rho * g * h_real;
+
+    document.getElementById('h-val').innerText = h_real.toFixed(2) + " m";
+    document.getElementById('p-val').innerText = Math.round(pressure).toLocaleString() + " Pa";
+
+    drawSensor(h_real, pressure);
+}
+
+function drawTank() {
+    // Latar belakang air
+    noStroke();
+    let col = color(30, 144, 255, 150);
+    if(rho > 1000) col = color(0, 105, 148, 180); // Laut lebih gelap
+    if(rho < 1000) col = color(255, 215, 0, 120); // Minyak kekuningan
+    if(rho > 10000) col = color(192, 192, 192, 200); // Raksa perak
+    
+    fill(col);
+    rect(width/4, tankTop, width/2, tankBottom - tankTop);
+    
+    // Garis Tangki
+    stroke(255);
+    strokeWeight(3);
+    noFill();
+    line(width/4, tankTop, width/4, tankBottom);
+    line(3*width/4, tankTop, 3*width/4, tankBottom);
+    line(width/4, tankBottom, 3*width/4, tankBottom);
+    
+    // Skala Kedalaman
+    strokeWeight(1);
+    stroke(255, 100);
+    for(let i = 0; i <= 10; i++) {
+        let y = map(i, 0, 10, tankTop, tankBottom);
+        line(width/4 - 10, y, width/4, y);
+        fill(255, 150);
+        noStroke();
+        textSize(10);
+        text(i + "m", width/4 - 35, y + 4);
+    }
+}
+
+function updateSensor() {
+    if (mouseIsPressed) {
+        if (mouseX > width/4 && mouseX < 3*width/4 && mouseY > tankTop && mouseY < tankBottom) {
+            sensorY = mouseY;
+        }
+    }
+}
+
+function drawSensor(h, p) {
+    // Garis Sensor
+    stroke(255, 0, 0);
+    strokeWeight(2);
+    line(width/4, sensorY, 3*width/4, sensorY);
+    
+    // Alat Sensor
+    fill(255, 255, 0);
+    stroke(0);
+    ellipse(width/2, sensorY, 20, 20);
+    
+    // Label di sensor
+    fill(255);
+    noStroke();
+    textAlign(LEFT);
+    text("Sensor Tekanan", width/2 + 15, sensorY + 5);
+}
+</script>

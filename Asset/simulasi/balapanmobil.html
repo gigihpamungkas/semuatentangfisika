@@ -4,7 +4,7 @@
         .main-container { width: 98%; max-width: 1200px; background: #16213e; padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
         h2 { text-align: center; color: #4cc9f0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; font-size: 1.4rem; }
         
-        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
         .control-group { background: #1a1a2e; padding: 10px; border-radius: 8px; border-top: 3px solid #f1c40f; }
         .car2-group { border-top-color: #e94560; }
         label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px; color: #aaa; }
@@ -13,7 +13,7 @@
         #canvas-holder { width: 100%; border-radius: 12px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
         
         .btn-group { display: flex; gap: 10px; margin-top: 10px; }
-        .btn { flex: 1; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; text-transform: uppercase;}
+        .btn { flex: 1; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; text-transform: uppercase;}
         .btn-start { background: #2ecc71; }
         .btn-pause { background: #4cc9f0; color: #1a1a2e; }
         .btn-reset { background: #e94560; }
@@ -28,6 +28,7 @@
         .val-yellow { color: #f1c40f; }
         .val-red { color: #e94560; }
     </style>
+
 
 <div class="main-container">
     <h2>Simulasi Balapan Mobil</h2>
@@ -55,6 +56,8 @@
             <input type="range" id="v2-slider" min="10" max="150" step="5" value="30" oninput="resetSim()">
             <label style="margin-top:8px;">Percepatan a2: <span id="a2-label" style="color:#e94560">1.5</span> m/s²</label>
             <input type="range" id="a2-slider" min="-5" max="5" step="0.1" value="1.5" oninput="resetSim()">
+            <label style="margin-top:8px;">Delay Mobil 2: <span id="delay-label" style="color:#e94560">2.0</span> s</label>
+            <input type="range" id="delay-slider" min="0" max="10" step="0.5" value="2.0" oninput="resetSim()">
         </div>
 
         <div class="control-group" style="border-top-color: #fff;">
@@ -95,7 +98,7 @@
 let isRunning = false, isPaused = false;
 let simTime = 0; 
 let car1, car2;
-let finishLine_m;
+let finishLine_m, delayM2;
 
 function setup() {
     let container = document.getElementById('canvas-holder');
@@ -124,16 +127,18 @@ function resetSim() {
     let v2 = parseFloat(document.getElementById('v2-slider').value);
     let a2 = parseFloat(document.getElementById('a2-slider').value);
     let f_km = parseFloat(document.getElementById('finish-slider').value);
+    delayM2 = parseFloat(document.getElementById('delay-slider').value);
 
     document.getElementById('v1-label').innerText = v1;
     document.getElementById('a1-label').innerText = a1.toFixed(1);
     document.getElementById('v2-label').innerText = v2;
     document.getElementById('a2-label').innerText = a2.toFixed(1);
     document.getElementById('finish-label').innerText = f_km.toFixed(1);
+    document.getElementById('delay-label').innerText = delayM2.toFixed(1);
 
     finishLine_m = f_km * 1000;
-    car1 = { v0_ms: v1/3.6, a_ms2: a1, s_m: 0, vt_ms: v1/3.6, finished: false, y: 110, color: '#f1c40f', label: 'M1' };
-    car2 = { v0_ms: v2/3.6, a_ms2: a2, s_m: 0, vt_ms: v2/3.6, finished: false, y: 240, color: '#e94560', label: 'M2' };
+    car1 = { v0_ms: v1/3.6, a_ms2: a1, s_m: 0, vt_ms: v1/3.6, finished: false, y: 110, color: '#f1c40f', label: 'M1', active: true };
+    car2 = { v0_ms: v2/3.6, a_ms2: a2, s_m: 0, vt_ms: v2/3.6, finished: false, y: 240, color: '#e94560', label: 'M2', active: false };
 
     document.getElementById('run-btn').disabled = false;
     document.getElementById('run-btn').innerText = "MULAI BALAPAN";
@@ -152,35 +157,33 @@ function draw() {
     if (isRunning && !isPaused) {
         let dt = 1/60; 
         
-        // Cek jika kedua mobil belum finish, waktu terus berjalan
         if (!car1.finished || !car2.finished) {
             simTime += dt;
         }
 
+        // Mobil 1 Update
         if (!car1.finished) {
             car1.vt_ms = car1.v0_ms + (car1.a_ms2 * simTime);
             car1.s_m = (car1.v0_ms * simTime) + (0.5 * car1.a_ms2 * simTime * simTime);
-            if (car1.s_m >= finishLine_m) { 
-                car1.s_m = finishLine_m; 
-                car1.finished = true; 
-                document.getElementById('tf1-val').innerText = simTime.toFixed(2) + " s";
-            }
+            if (car1.s_m >= finishLine_m) { car1.s_m = finishLine_m; car1.finished = true; document.getElementById('tf1-val').innerText = simTime.toFixed(2) + " s"; }
         }
+
+        // Mobil 2 Update dengan Logika Delay
         if (!car2.finished) {
-            car2.vt_ms = car2.v0_ms + (car2.a_ms2 * simTime);
-            car2.s_m = (car2.v0_ms * simTime) + (0.5 * car2.a_ms2 * simTime * simTime);
-            if (car2.s_m >= finishLine_m) { 
-                car2.s_m = finishLine_m; 
-                car2.finished = true; 
-                document.getElementById('tf2-val').innerText = simTime.toFixed(2) + " s";
+            if (simTime >= delayM2) {
+                car2.active = true;
+                let t_relative = simTime - delayM2;
+                car2.vt_ms = car2.v0_ms + (car2.a_ms2 * t_relative);
+                car2.s_m = (car2.v0_ms * t_relative) + (0.5 * car2.a_ms2 * t_relative * t_relative);
+                if (car2.s_m >= finishLine_m) { car2.s_m = finishLine_m; car2.finished = true; document.getElementById('tf2-val').innerText = simTime.toFixed(2) + " s"; }
+            } else {
+                car2.active = false;
+                car2.s_m = 0;
+                car2.vt_ms = car2.v0_ms;
             }
         }
 
-        if (car1.finished && car2.finished) { 
-            isRunning = false; 
-            document.getElementById('run-btn').innerText = "BALAPAN SELESAI"; 
-        }
-        
+        if (car1.finished && car2.finished) { isRunning = false; document.getElementById('run-btn').innerText = "BALAPAN SELESAI"; }
         updateUI(simTime, car1.s_m, car1.vt_ms*3.6, car2.s_m, car2.vt_ms*3.6);
     }
     
@@ -201,26 +204,19 @@ function updateUI(t, s1, vt1, s2, vt2) {
 
 function drawRoadAndRuler() {
     stroke(255, 80); strokeWeight(2);
-    // Jalur mobil
     line(0, 80, width, 80); line(0, 210, width, 210); line(0, 340, width, 340);
-    
-    // Garis putus-putus
     stroke(255, 120); drawingContext.setLineDash([20, 20]);
     line(0, 145, width, 145); line(0, 275, width, 275);
     drawingContext.setLineDash([]);
 
-    // PENGGARIS DI BAWAH LINTASAN
     stroke(255, 200); strokeWeight(1);
-    let startX = 60;
-    let endX = width - 120;
+    let startX = 60, endX = width - 120;
     line(startX, 320, endX, 320);
-    
     for (let i = 0; i <= 10; i++) {
         let x = map(i, 0, 10, startX, endX);
         line(x, 320, x, 330);
         noStroke(); fill(255, 150); textAlign(CENTER); textSize(9);
-        let distLabel = (i * (finishLine_m / 10)).toFixed(0) + "m";
-        text(distLabel, x, 342);
+        text((i * (finishLine_m / 10)).toFixed(0) + "m", x, 342);
         stroke(255, 200);
     }
 }
@@ -233,16 +229,30 @@ function drawFinishLine(x) {
 
 function drawCar(x, car) {
     push(); translate(x, car.y);
-    if (isRunning || isPaused || car.finished) {
+    
+    // Kecepatan di atas mobil (hanya jika aktif atau start)
+    fill(255); noStroke(); textAlign(CENTER); textSize(10);
+    let speedText = (car.active || (isRunning && car.label === 'M2' && simTime < delayM2)) ? 0 : Math.round(car.vt_ms*3.6);
+    if(car.active) speedText = Math.round(car.vt_ms*3.6);
+    
+    // Status Delay
+    if(isRunning && car.label === 'M2' && !car.active && !car.finished) {
+        fill(255, 100, 100);
+        text("WAITING...", 0, -35);
+    } else {
+        text(speedText + " km/h", 0, -38);
+    }
+
+    if (car.active || (isRunning && car === car1 && !car1.finished)) {
         stroke(46, 204, 113); strokeWeight(3);
         let aLen = map(car.vt_ms, 0, 45, 10, 80);
         line(35, 0, 35+aLen, 0); line(35+aLen, 0, 25+aLen, -5); line(35+aLen, 0, 25+aLen, 5);
     }
+    
     fill(car.color); noStroke(); rectMode(CENTER);
     rect(0, 0, 70, 25, 5); rect(0, -18, 45, 18, 10, 10, 0, 0);
     fill(20); ellipse(-22, 12, 18, 18); ellipse(22, 12, 18, 18);
     fill(255); textAlign(CENTER); textStyle(BOLD); text(car.label, 0, -18);
-    textSize(10); text(Math.round(car.vt_ms*3.6) + " km/h", 0, -38);
     pop();
 }
 </script>

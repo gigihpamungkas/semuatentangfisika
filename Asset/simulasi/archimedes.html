@@ -1,0 +1,239 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1100px; background: #16213e; padding: 20px; border-radius: 20px; border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .control-group { background: #1a1a2e; padding: 10px; border-radius: 8px; border-top: 4px solid #f1c40f; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px; color: #aaa; }
+        select, input[type=range] { width: 100%; cursor: pointer; background: #1a1a2e; color: #fff; border: 1px solid #4cc9f0; border-radius: 4px; }
+        
+        #canvas-holder { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; cursor: grab; }
+        #canvas-holder:active { cursor: grabbing; }
+
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn { flex: 1; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; text-transform: uppercase; }
+        .btn-start { background: #2ecc71; }
+        .btn-pause { background: #4cc9f0; color: #1a1a2e; }
+        .btn-reset { background: #e94560; }
+        
+        .status-display { display: flex; justify-content: space-around; background: #1a1a2e; padding: 10px; border-radius: 10px; border-bottom: 4px solid #f1c40f; margin-top: 10px;}
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 10px; color: #888; }
+        .stat-value { font-size: 1.1rem; font-weight: bold; color: #f1c40f; }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Hukum Archimedes</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Material Benda:</label>
+            <select id="material-select" onchange="updateMaterial()">
+                <option value="wood">Kayu (~600 kg/m³)</option>
+                <option value="ice">Es (~920 kg/m³)</option>
+                <option value="iron">Besi (~7800 kg/m³)</option>
+                <option value="custom" selected>Kustom (Setel rhoB = rhoF)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>ρ Benda: <span id="rhoB-label">1000</span> kg/m³</label>
+            <input type="range" id="rhoB-slider" min="100" max="15000" step="10" value="1000" oninput="updateSliders()">
+        </div>
+        <div class="control-group">
+            <label>Volume: <span id="volB-label">1.0</span> m³</label>
+            <input type="range" id="volB-slider" min="0.5" max="3" step="0.1" value="1" oninput="updateSliders()">
+        </div>
+        <div class="control-group">
+            <label>Zat Cair:</label>
+            <select id="fluid-select" onchange="updateFluid()">
+                <option value="water" selected>Air (1000 kg/m³)</option>
+                <option value="saltwater">Air Garam (1030 kg/m³)</option>
+                <option value="oil">Minyak (900 kg/m³)</option>
+                <option value="mercury">Air Raksa (13600 kg/m³)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-start" onclick="startSim()" id="run-btn">Mulai</button>
+        <button class="btn btn-pause" onclick="togglePause()" id="pause-btn">Pause</button>
+        <button class="btn btn-reset" onclick="resetSim()">Reset</button>
+    </div>
+
+    <div id="canvas-holder"></div>
+
+    <div class="status-display">
+        <div class="stat-item"><div class="stat-label">BERAT (W)</div><div id="w-val" class="stat-value">0 N</div></div>
+        <div class="stat-item"><div class="stat-label">APUNG (Fa)</div><div id="fa-val" class="stat-value">0 N</div></div>
+        <div class="stat-item"><div class="stat-label">KONDISI</div><div id="status-text" class="stat-value">-</div></div>
+    </div>
+</div>
+
+<script>
+let isRunning = false, isPaused = false;
+let rhoB, volB, rhoF, g = 9.8;
+let blockY, blockVy = 0, blockAy = 0;
+let tankTop = 100, tankBottom = 450, waterLevelY = 180;
+let bSize;
+let isDragging = false;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 480);
+    canvas.parent('canvas-holder');
+    updateSliders();
+    updateMaterial();
+    updateFluid();
+    resetSim();
+}
+
+function startSim() { isRunning = true; isPaused = false; }
+function togglePause() { if (isRunning) isPaused = !isPaused; document.getElementById('pause-btn').innerText = isPaused ? "Resume" : "Pause"; }
+function resetSim() {
+    isRunning = false;
+    isPaused = false;
+    blockY = waterLevelY + 80; // Default di tengah air untuk menunjukkan melayang
+    blockVy = 0;
+    blockAy = 0;
+    document.getElementById('pause-btn').innerText = "Pause";
+}
+
+function updateSliders() {
+    rhoB = parseFloat(document.getElementById('rhoB-slider').value);
+    volB = parseFloat(document.getElementById('volB-slider').value);
+    document.getElementById('rhoB-label').innerText = rhoB;
+    document.getElementById('volB-label').innerText = volB.toFixed(1);
+}
+
+function updateMaterial() {
+    let mat = document.getElementById('material-select').value;
+    let s = document.getElementById('rhoB-slider');
+    if (mat === "wood") s.value = 600;
+    else if (mat === "ice") s.value = 920;
+    else if (mat === "iron") s.value = 7800;
+    s.disabled = (mat !== "custom");
+    updateSliders();
+}
+
+function updateFluid() {
+    let fl = document.getElementById('fluid-select').value;
+    if (fl === "water") rhoF = 1000;
+    else if (fl === "saltwater") rhoF = 1030;
+    else if (fl === "oil") rhoF = 900;
+    else if (fl === "mercury") rhoF = 13600;
+}
+
+function draw() {
+    background(10, 15, 30);
+    let blockX = width / 2;
+    bSize = 75 * pow(volB, 1/3); 
+
+    drawEnvironment();
+
+    let massB = rhoB * volB;
+    let weight = massB * g;
+    let submergedH = max(0, min(bSize, (blockY + bSize/2) - waterLevelY));
+    let volSub = (submergedH / bSize) * volB;
+    let fa = rhoF * volSub * g;
+
+    if (isDragging) {
+        blockY = constrain(mouseY, 50, tankBottom - bSize/2);
+        blockVy = 0;
+    } else if (isRunning && !isPaused) {
+        // Logika Fisika Melayang
+        if (Math.abs(rhoB - rhoF) < 1 && submergedH >= bSize) {
+            // Jika Massa Jenis SAMA, kunci kecepatan agar diam (Melayang Sempurna)
+            blockVy *= 0.8; 
+            blockAy = 0;
+        } else {
+            let fNet = weight - fa;
+            blockAy = fNet / massB;
+            if (submergedH > 0) blockAy -= blockVy * 0.2; // Redaman cairan
+            blockVy += blockAy;
+        }
+        
+        blockY += blockVy;
+
+        // Batas Bejana Bawah
+        if (blockY + bSize/2 > tankBottom) {
+            blockY = tankBottom - bSize/2;
+            blockVy *= -0.1;
+        }
+    }
+
+    updateUI(weight, fa);
+    drawBlock(blockX, blockY, bSize);
+    drawVectors(blockX, blockY, weight, fa);
+}
+
+function drawEnvironment() {
+    noStroke();
+    let c;
+    if (rhoF == 1000) c = color(0, 150, 255, 140);
+    else if (rhoF == 1030) c = color(0, 100, 200, 160);
+    else if (rhoF == 900) c = color(255, 215, 0, 110);
+    else c = color(170, 170, 180, 220);
+    fill(c);
+    rect(width/4, waterLevelY, width/2, tankBottom - waterLevelY);
+
+    stroke(255, 80); strokeWeight(4); noFill();
+    line(width/4, tankTop, width/4, tankBottom);
+    line(3*width/4, tankTop, 3*width/4, tankBottom);
+    line(width/4, tankBottom, 3*width/4, tankBottom);
+}
+
+function drawBlock(x, y, s) {
+    rectMode(CENTER);
+    let mat = document.getElementById('material-select').value;
+    if (mat === "wood") fill(139, 69, 19);
+    else if (mat === "ice") fill(173, 216, 230, 210);
+    else if (mat === "iron") fill(70);
+    else fill(180, 80, 220);
+    
+    stroke(255, 50); strokeWeight(1);
+    rect(x, y, s, s, 6);
+    fill(255); noStroke(); textAlign(CENTER); textSize(10);
+    text(Math.round(rhoB) + " kg/m³", x, y + s/2 + 15);
+    rectMode(CORNER);
+}
+
+function drawVectors(x, y, w, fa) {
+    const getLen = (val) => map(log(max(1, val)), 0, log(200000), 10, 110);
+
+    stroke(255, 60, 60); strokeWeight(4);
+    let lenW = getLen(w);
+    drawArrow(x - 8, y, x - 8, y + lenW);
+    
+    if (fa > 1) {
+        stroke(60, 255, 120);
+        let lenFa = getLen(fa);
+        drawArrow(x + 8, y, x + 8, y - lenFa);
+    }
+}
+
+function drawArrow(x1, y1, x2, y2) {
+    line(x1, y1, x2, y2);
+    let angle = atan2(y2 - y1, x2 - x1);
+    push(); translate(x2, y2); rotate(angle);
+    line(0, 0, -10, -5); line(0, 0, -10, 5);
+    pop();
+}
+
+function mousePressed() {
+    let d = dist(mouseX, mouseY, width/2, blockY);
+    if (d < bSize/2) isDragging = true;
+}
+
+function mouseReleased() { isDragging = false; }
+
+function updateUI(w, fa) {
+    document.getElementById('w-val').innerText = Math.round(w).toLocaleString() + " N";
+    document.getElementById('fa-val').innerText = Math.round(fa).toLocaleString() + " N";
+    let txt = document.getElementById('status-text');
+    if (rhoB < rhoF) { txt.innerText = "TERAPUNG"; txt.style.color = "#2ecc71"; }
+    else if (Math.abs(rhoB - rhoF) < 5) { txt.innerText = "MELAYANG"; txt.style.color = "#f1c40f"; }
+    else { txt.innerText = "TENGGELAM"; txt.style.color = "#e94560"; }
+}
+</script>

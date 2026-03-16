@@ -1,0 +1,196 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1250px; background: #16213e; padding: 20px; border-radius: 20px; border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; font-size: 1.5rem; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .control-group { background: #1a1a2e; padding: 10px; border-radius: 8px; border-top: 3px solid #4cc9f0; }
+        label { font-size: 10px; font-weight: bold; display: block; margin-bottom: 5px; color: #aaa; }
+        input[type=range], select { width: 100%; cursor: pointer; background: #1a1a2e; color: #fff; border: 1px solid #4cc9f0; padding: 3px; border-radius: 4px; }
+        
+        #canvas-holder { width: 100%; border-radius: 12px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-start { background: #2ecc71; }
+        .btn-pause { background: #4cc9f0; color: #1a1a2e; }
+        .btn-reset { background: #e94560; }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Menara Air / Tangki Bocor </h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Tinggi Dudukan: <span id="h-stand-label">1.5</span> m</label>
+            <input type="range" id="h-stand-slider" min="0.5" max="3" step="0.1" value="1.5">
+        </div>
+        <div class="control-group">
+            <label>Diameter Tabung: <span id="dia-label">2.0</span> m</label>
+            <input type="range" id="dia-slider" min="1.0" max="4.0" step="0.1" value="2.0">
+        </div>
+        <div class="control-group">
+            <label>Zat Cair (ρ):</label>
+            <select id="rho-select">
+                <option value="1000">Air (1000 kg/m³)</option>
+                <option value="800">Minyak (800 kg/m³)</option>
+                <option value="1260">Gliserin (1260 kg/m³)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>H1 (Lubang Atas): <span id="h1-label">4.0</span> m</label>
+            <input type="range" id="h1-slider" min="3.1" max="4.9" step="0.1" value="4.0">
+        </div>
+        <div class="control-group">
+            <label>H2 (Lubang Tengah): <span id="h2-label">2.5</span> m</label>
+            <input type="range" id="h2-slider" min="1.6" max="3.0" step="0.1" value="2.5">
+        </div>
+        <div class="control-group">
+            <label>H3 (Lubang Bawah): <span id="h3-label">1.0</span> m</label>
+            <input type="range" id="h3-slider" min="0.1" max="1.5" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    
+    <div class="btn-group">
+        <button class="btn btn-start" onclick="startSim()" id="run-btn">MULAI ALIRAN</button>
+        <button class="btn btn-pause" onclick="togglePause()" id="pause-btn">PAUSE</button>
+        <button class="btn btn-reset" onclick="resetSim()">RESET</button>
+    </div>
+</div>
+
+<script>
+let isRunning = false, isPaused = false;
+let waterLevel = 5.0; 
+let g = 9.8;
+let scale = 35; // 1 meter = 35 pixel
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 550);
+    canvas.parent('canvas-holder');
+    resetSim();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 550);
+    resetSim();
+}
+
+function resetSim() {
+    isRunning = false;
+    isPaused = false;
+    waterLevel = 5.0;
+    document.getElementById('run-btn').disabled = false;
+}
+
+function startSim() { isRunning = true; isPaused = false; document.getElementById('run-btn').disabled = true; }
+function togglePause() { if (isRunning) isPaused = !isPaused; document.getElementById('pause-btn').innerText = isPaused ? "RESUME" : "PAUSE"; }
+
+function draw() {
+    background(10, 15, 30);
+    
+    let hStand = parseFloat(document.getElementById('h-stand-slider').value);
+    let dia = parseFloat(document.getElementById('dia-slider').value);
+    let rho = parseFloat(document.getElementById('rho-select').value);
+    let hHoles = [
+        parseFloat(document.getElementById('h1-slider').value),
+        parseFloat(document.getElementById('h2-slider').value),
+        parseFloat(document.getElementById('h3-slider').value)
+    ];
+
+    // Update Label UI
+    document.getElementById('h-stand-label').innerText = hStand.toFixed(1);
+    document.getElementById('dia-label').innerText = dia.toFixed(1);
+    document.getElementById('h1-label').innerText = hHoles[0].toFixed(1);
+    document.getElementById('h2-label').innerText = hHoles[1].toFixed(1);
+    document.getElementById('h3-label').innerText = hHoles[2].toFixed(1);
+
+    let groundY = height - 60;
+    let tankX = 80;
+    let tankW = dia * scale; 
+    let tankBottomY = groundY - (hStand * scale);
+    let holeStartX = tankX + tankW; // Titik nol penggaris di sumbu X
+
+    drawScaleX(groundY, holeStartX);
+    drawTank(tankX, tankBottomY, tankW, hHoles, waterLevel, rho);
+    
+    if (isRunning && !isPaused) {
+        let totalOut = 0;
+        let areaLubang = 0.005; // Asumsi luas lubang
+        let areaTangki = PI * sq(dia / 2);
+
+        hHoles.forEach(h => { 
+            if(waterLevel > h) {
+                totalOut += sqrt(2*g*(waterLevel-h)); 
+            }
+        });
+        
+        waterLevel -= (totalOut * areaLubang / areaTangki) * 0.1; 
+        if(waterLevel < 0) waterLevel = 0;
+    }
+
+    hHoles.forEach(h => {
+        if (waterLevel > h && isRunning) {
+            drawContinuousStream(holeStartX, tankBottomY - (h * scale), waterLevel - h, h + hStand, rho);
+        }
+    });
+}
+
+function drawScaleX(groundY, zeroX) {
+    stroke(100); strokeWeight(2); line(0, groundY, width, groundY); // Tanah
+    fill(50, 40, 30); noStroke(); rect(0, groundY, width, 60);
+    
+    // Angka Penggaris
+    textAlign(CENTER); textSize(10); fill(255, 180); stroke(255, 50);
+    for (let m = 0; m <= 30; m++) {
+        let x = zeroX + (m * scale); // Titik nol tepat di bawah lubang
+        if (x > width) break;
+        line(x, groundY, x, groundY + 10);
+        noStroke();
+        text(m + "m", x, groundY + 25);
+        stroke(255, 50);
+    }
+}
+
+function drawTank(x, bottomY, w, holes, level, rho) {
+    fill(100); noStroke();
+    rect(x + w/4, bottomY, w/2, height - 60 - bottomY);
+
+    let waterCol = (rho == 1000) ? color(0, 150, 255, 200) : (rho == 800 ? color(255, 200, 0, 180) : color(200, 100, 255, 180));
+    fill(waterCol);
+    rect(x, bottomY - (level * scale), w, level * scale);
+
+    stroke(255, 100); noFill(); strokeWeight(2);
+    rect(x, bottomY - (5 * scale), w, 5 * scale);
+
+    fill(255, 50, 50); noStroke();
+    holes.forEach(h => ellipse(x + w, bottomY - (h * scale), 8, 8));
+}
+
+function drawContinuousStream(xStart, yStart, h_depth, h_total_drop, rho) {
+    let v_horizontal = sqrt(2 * g * h_depth);
+    let waterCol = (rho == 1000) ? color(0, 180, 255, 220) : (rho == 800 ? color(255, 220, 0, 200) : color(200, 150, 255, 200));
+    
+    noFill(); stroke(waterCol); strokeWeight(4);
+    beginShape();
+    let t_max = sqrt(2 * h_total_drop / g);
+    for (let t = 0; t <= t_max; t += 0.05) {
+        let dx = v_horizontal * t * scale;
+        let dy = 0.5 * g * t * t * scale;
+        let x = xStart + dx;
+        let y = yStart + dy;
+        if (y > height - 60) break;
+        vertex(x, y);
+    }
+    let xFinal = xStart + (v_horizontal * t_max * scale);
+    vertex(xFinal, height - 60);
+    endShape();
+    
+    fill(waterCol); noStroke();
+    ellipse(xFinal, height - 60, 10, 5);
+}
+</script>

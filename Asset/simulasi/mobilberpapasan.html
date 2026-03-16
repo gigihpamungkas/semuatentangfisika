@@ -1,0 +1,230 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1200px; background: #16213e; padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #0f3460; }
+        h2 { text-align: center; color: #4cc9f0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; font-size: 1.4rem; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; background: #0f3460; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
+        .control-group { background: #1a1a2e; padding: 10px; border-radius: 8px; border-top: 3px solid #f1c40f; }
+        .car2-group { border-top-color: #e94560; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px; color: #aaa; }
+        input[type=range], select { width: 100%; cursor: pointer; background: #1a1a2e; color: #fff; border: 1px solid #4cc9f0; padding: 3px; border-radius: 4px; }
+        input[type=range]:disabled { opacity: 0.3; }
+        
+        #canvas-holder { width: 100%; border-radius: 12px; overflow: hidden; border: 2px solid #4cc9f0; background: #050505; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; text-transform: uppercase;}
+        .btn-start { background: #2ecc71; }
+        .btn-reset { background: #e94560; }
+        
+        .data-panel { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; justify-content: center; }
+        .data-card { flex: 1; min-width: 180px; background: #1a1a2e; padding: 12px; border-radius: 10px; text-align: center; border-bottom: 4px solid #fff; }
+        .car1-card { border-bottom-color: #f1c40f; }
+        .car2-card { border-bottom-color: #e94560; }
+        
+        .data-label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        .data-value { font-size: 1.1rem; font-weight: bold; color: #fff; display: block; margin: 2px 0; }
+        .status-msg { color: #4cc9f0; font-size: 0.8rem; font-weight: bold; margin-top: 5px; display: block; }
+    </style>
+
+<div class="main-container">
+    <h2>Simulasi Mobil Berpapasan</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Mobil 1 (Kuning): Jenis Gerak</label>
+            <select id="type1-select" onchange="toggleAccel(1)">
+                <option value="GLB" selected>GLB</option>
+                <option value="GLBB">GLBB</option>
+            </select>
+            <label style="margin-top:5px;">V1 Awal: <span id="v1-label">50</span> km/jam</label>
+            <input type="range" id="v1-slider" min="10" max="150" value="50" oninput="resetSim()">
+            <label style="margin-top:5px;">a1: <span id="a1-label">0</span> m/s²</label>
+            <input type="range" id="a1-slider" min="0" max="5" step="0.1" value="0" disabled oninput="resetSim()">
+        </div>
+
+        <div class="control-group car2-group">
+            <label>Mobil 2 (Merah): Jenis Gerak</label>
+            <select id="type2-select" onchange="toggleAccel(2)">
+                <option value="GLB">GLB</option>
+                <option value="GLBB" selected>GLBB</option>
+            </select>
+            <label style="margin-top:5px;">V2 Awal: <span id="v2-label">40</span> km/jam</label>
+            <input type="range" id="v2-slider" min="10" max="150" value="40" oninput="resetSim()">
+            <label style="margin-top:5px;">a2: <span id="a2-label">1.0</span> m/s²</label>
+            <input type="range" id="a2-slider" min="0" max="5" step="0.1" value="1.0" oninput="resetSim()">
+            <label style="margin-top:5px;">Delay M2: <span id="delay-label">2.0</span> s</label>
+            <input type="range" id="delay-slider" min="0" max="10" step="0.5" value="2.0" oninput="resetSim()">
+        </div>
+
+        <div class="control-group" style="border-top-color: #fff;">
+            <label>Jarak Antar Mobil: <span id="dist-label">1.0</span> km</label>
+            <input type="range" id="dist-slider" min="0.5" max="5" step="0.1" value="1.0" oninput="resetSim()">
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    
+    <div class="btn-group">
+        <button class="btn btn-start" onclick="startSim()" id="run-btn">Mulai Simulasi</button>
+        <button class="btn btn-reset" onclick="resetSim()">RESET</button>
+    </div>
+
+    <div class="data-panel">
+        <div class="data-card">
+            <div class="data-label">WAKTU SIMULASI (t)</div>
+            <span id="t-val" class="data-value">0.00 s</span>
+        </div>
+        <div class="data-card car1-card">
+            <div class="data-label">Mobil 1 (Kuning)</div>
+            <span class="data-value" style="color:#f1c40f">S1: <span id="s1-val">0.0 m</span></span>
+            <span class="data-value" style="color:#f1c40f">Vt1: <span id="vt1-val">0 km/h</span></span>
+            <span id="m1-status" class="status-msg">STANDBY</span>
+        </div>
+        <div class="data-card car2-card">
+            <div class="data-label">Mobil 2 (Merah)</div>
+            <span class="data-value" style="color:#e94560">S2 (Tempuh): <span id="s2-val">0.0 m</span></span>
+            <span class="data-value" style="color:#e94560">Vt2: <span id="vt2-val">0 km/h</span></span>
+            <span id="m2-status" class="status-msg">WAITING...</span>
+        </div>
+    </div>
+</div>
+
+<script>
+let isRunning = false;
+let simTime = 0; 
+let car1, car2;
+let totalDist_m, delay_s;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 320);
+    canvas.parent('canvas-holder');
+    resetSim();
+}
+
+function toggleAccel(carNum) {
+    let type = document.getElementById(`type${carNum}-select`).value;
+    let slider = document.getElementById(`a${carNum}-slider`);
+    slider.disabled = (type === "GLB");
+    if(type === "GLB") slider.value = 0;
+    resetSim();
+}
+
+function resetSim() {
+    isRunning = false; simTime = 0;
+    let v1 = parseFloat(document.getElementById('v1-slider').value);
+    let a1 = parseFloat(document.getElementById('a1-slider').value);
+    let v2 = parseFloat(document.getElementById('v2-slider').value);
+    let a2 = parseFloat(document.getElementById('a2-slider').value);
+    let d_km = parseFloat(document.getElementById('dist-slider').value);
+    delay_s = parseFloat(document.getElementById('delay-slider').value);
+
+    document.getElementById('v1-label').innerText = v1;
+    document.getElementById('a1-label').innerText = a1.toFixed(1);
+    document.getElementById('v2-label').innerText = v2;
+    document.getElementById('a2-label').innerText = a2.toFixed(1);
+    document.getElementById('dist-label').innerText = d_km.toFixed(1);
+    document.getElementById('delay-label').innerText = delay_s.toFixed(1);
+
+    totalDist_m = d_km * 1000;
+    car1 = { x_m: 0, v0: v1/3.6, a: a1, vt: v1/3.6, active: false, color: '#f1c40f', label: 'M1' };
+    car2 = { x_m: totalDist_m, v0: v2/3.6, a: a2, vt: v2/3.6, active: false, color: '#e94560', label: 'M2' };
+
+    document.getElementById('run-btn').innerText = "MULAI SIMULASI";
+    document.getElementById('m1-status').innerText = "STANDBY";
+    document.getElementById('m2-status').innerText = delay_s > 0 ? "WAITING (DELAY)" : "STANDBY";
+    updateUI(0, 0, car1.vt, 0, car2.vt);
+}
+
+function startSim() { isRunning = true; }
+
+function draw() {
+    background(10, 15, 30);
+    drawRoadAndRuler();
+    
+    if (isRunning) {
+        let dt = 1/60; 
+        if (car1.x_m < car2.x_m) {
+            simTime += dt;
+            
+            // Mobil 1 (Kiri -> Kanan)
+            car1.active = true;
+            document.getElementById('m1-status').innerText = "MOVING";
+            car1.vt = car1.v0 + (car1.a * simTime);
+            car1.x_m = (car1.v0 * simTime) + (0.5 * car1.a * simTime * simTime);
+            
+            // Mobil 2 (Kanan -> Kiri)
+            if (simTime >= delay_s) {
+                car2.active = true;
+                document.getElementById('m2-status').innerText = "MOVING";
+                let t_rel = simTime - delay_s;
+                car2.vt = car2.v0 + (car2.a * t_rel);
+                let distCovered2 = (car2.v0 * t_rel) + (0.5 * car2.a * t_rel * t_rel);
+                car2.x_m = totalDist_m - distCovered2;
+            } else {
+                car2.active = false;
+                document.getElementById('m2-status').innerText = "WAITING (" + (delay_s - simTime).toFixed(1) + "s)";
+            }
+
+            if (car1.x_m >= car2.x_m) {
+                car1.x_m = car2.x_m = (car1.x_m + car2.x_m) / 2;
+                isRunning = false;
+                document.getElementById('run-btn').innerText = "BERPAPASAN!";
+                document.getElementById('m2-status').innerText = "STOP";
+                document.getElementById('m1-status').innerText = "STOP";
+            }
+        }
+        updateUI(simTime, car1.x_m, car1.vt, (totalDist_m - car2.x_m), car2.vt);
+    }
+    
+    let visualX1 = map(car1.x_m, 0, totalDist_m, 60, width - 60);
+    let visualX2 = map(car2.x_m, 0, totalDist_m, 60, width - 60);
+    drawCar(visualX1, 120, car1, 1);
+    drawCar(visualX2, 120, car2, -1);
+}
+
+function updateUI(t, s1, vt1, s2, vt2) {
+    document.getElementById('t-val').innerText = t.toFixed(2) + " s";
+    document.getElementById('s1-val').innerText = s1.toFixed(1) + " m";
+    document.getElementById('vt1-val').innerText = Math.round(vt1 * 3.6) + " km/h";
+    document.getElementById('s2-val').innerText = s2.toFixed(1) + " m";
+    document.getElementById('vt2-val').innerText = Math.round(vt2 * 3.6) + " km/h";
+}
+
+function drawRoadAndRuler() {
+    stroke(255, 80); strokeWeight(2); line(0, 150, width, 150); line(0, 100, width, 100);
+    stroke(255, 120);
+    let startX = 60, endX = width - 60;
+    line(startX, 180, endX, 180);
+    for (let i = 0; i <= 5; i++) {
+        let x = map(i, 0, 5, startX, endX);
+        line(x, 180, x, 190);
+        noStroke(); fill(255, 100); textAlign(CENTER); textSize(9);
+        text((i * (totalDist_m/5)).toFixed(0) + "m", x, 205);
+        stroke(255, 120);
+    }
+}
+
+function drawCar(x, y, car, dir) {
+    push(); translate(x, y);
+    fill(255); noStroke(); textAlign(CENTER); textSize(11); textStyle(BOLD);
+    let displayVt = (car.active || (simTime == 0 && dir == 1)) ? Math.round(car.vt * 3.6) : 0;
+    if (simTime == 0 && dir == -1 && delay_s == 0) displayVt = Math.round(car.vt * 3.6);
+    text(displayVt + " km/h", 0, -35);
+
+    if (dir === -1) scale(-1, 1);
+    if (car.active || (simTime == 0 && car.v0 > 0 && ((dir==1) || (dir==-1 && delay_s==0)))) {
+        stroke(46, 204, 113); strokeWeight(3);
+        let aLen = map(car.vt, 0, 45, 10, 60);
+        line(35, 0, 35+aLen, 0); line(35+aLen, 0, 25+aLen, -5); line(35+aLen, 0, 25+aLen, 5);
+    }
+    fill(car.color); noStroke(); rectMode(CENTER);
+    rect(0, 0, 60, 20, 5); rect(0, -15, 35, 15, 8, 8, 0, 0);
+    fill(20); ellipse(-18, 10, 15, 15); ellipse(18, 10, 15, 15);
+    if (dir === -1) scale(-1, 1);
+    fill(255); textAlign(CENTER); textStyle(BOLD); text(car.label, 0, -15);
+    pop();
+}
+</script>

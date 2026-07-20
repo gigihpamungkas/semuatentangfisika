@@ -1,4 +1,3 @@
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; display: flex; justify-content: center; }
@@ -30,7 +29,7 @@
 <body>
 
 <div class="main-container">
-    <h2>Interaksi Gaya Coulomb & Analisis Vektor</h2>
+    <h2>Virtual Lab: Interaksi Gaya Coulomb & Analisis Vektor</h2>
     
     <div class="ui-grid">
         <div class="control-group">
@@ -57,7 +56,7 @@
     </div>
 
     <div id="canvas-holder"></div>
-    <div class="instruction">💡 Info Praktikum: Geser muatan menggunakan mouse/kursor untuk melihat perubahan vektor gaya secara real-time!</div>
+    <div class="instruction">💡 Info Praktikum: Geser muatan menggunakan mouse/kursor untuk melihat perubahan vektor gaya dan jarak antar muatan secara real-time!</div>
 
     <div class="data-panel" id="data-panel-container"></div>
 </div>
@@ -131,13 +130,9 @@ class Charge {
         let fTotal = Math.sqrt(this.fx * this.fx + this.fy * this.fy);
         if (fTotal < 1e-3) return; 
 
-        // FORMULA BARU: Menjamin panah selalu lebih panjang dari radius muatan
-        // fTotal^0.4 digunakan agar gaya kecil tetap terlihat memanjang, tapi gaya raksasa tidak kelewatan layar
         let visualForce = Math.pow(fTotal, 0.4); 
-        
-        // Panjang minimum adalah Radius muatan + 30 piksel agar menonjol keluar
         let baseLen = this.Radius + 30 + (visualForce * 25); 
-        baseLen = constrain(baseLen, this.Radius + 30, 250); // Maksimal panjang panah dibatasi 250px
+        baseLen = constrain(baseLen, this.Radius + 30, 250);
 
         let angle = Math.atan2(this.fy, this.fx);
 
@@ -145,11 +140,9 @@ class Charge {
         translate(this.x, this.y);
         rotate(angle);
         
-        // Gambar garis panah (Lebih tebal dan mencolok)
         stroke(52, 211, 153); strokeWeight(4); 
         line(0, 0, baseLen, 0);
         
-        // Gambar kepala panah (Lebih besar)
         fill(52, 211, 153); noStroke();
         triangle(baseLen, 0, baseLen - 14, -7, baseLen - 14, 7);
         pop();
@@ -165,6 +158,9 @@ function draw() {
     drawGrid();
     calculateForces();
     
+    // Panggil fungsi gambar jarak sebelum menggambar muatan
+    drawDistances();
+    
     for (let i = 0; i < charges.length; i++) {
         charges[i].display(i);
     }
@@ -175,6 +171,45 @@ function drawGrid() {
     stroke(30, 41, 59); strokeWeight(1);
     for (let x = 0; x < width; x += 40) line(x, 0, x, height);
     for (let y = 0; y < height; y += 40) line(0, y, width, y);
+}
+
+// Fungsi Baru: Menggambar garis jarak antar muatan
+function drawDistances() {
+    push();
+    for (let i = 0; i < charges.length; i++) {
+        for (let j = i + 1; j < charges.length; j++) { // j = i + 1 agar tidak menggambar garis bolak-balik
+            let c1 = charges[i];
+            let c2 = charges[j];
+            
+            // 1. Gambar Garis Putus-putus
+            stroke(255, 100); // Putih semi-transparan
+            strokeWeight(1.5);
+            drawingContext.setLineDash([5, 5]); // Pola putus-putus
+            line(c1.x, c1.y, c2.x, c2.y);
+            drawingContext.setLineDash([]); // Reset pola agar tidak mempengaruhi bentuk lain
+            
+            // 2. Hitung Nilai Jarak dan Posisi Tengah
+            let d_px = dist(c1.x, c1.y, c2.x, c2.y);
+            if (d_px < 20) d_px = 20; // Menyesuaikan batas minimum seperti di rumus gaya
+            let d_m = d_px * scalePxToMeter;
+            
+            let midX = (c1.x + c2.x) / 2;
+            let midY = (c1.y + c2.y) / 2;
+            
+            // 3. Gambar Label Teks (Dengan background kecil agar mudah dibaca)
+            rectMode(CENTER);
+            noStroke();
+            fill(15, 23, 42, 200); // Latar belakang gelap transparan di balik teks
+            rect(midX, midY, 48, 18, 4); // Kotak background teks
+            
+            fill(255);
+            textAlign(CENTER, CENTER);
+            textSize(10);
+            textStyle(NORMAL);
+            text(d_m.toFixed(2) + " m", midX, midY); // Menampilkan jarak dalam meter
+        }
+    }
+    pop();
 }
 
 function calculateForces() {

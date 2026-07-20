@@ -1,0 +1,298 @@
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1200px; background: #1e293b; padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        h2 { text-align: center; color: #38bdf8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; font-size: 1.4rem; }
+        
+        .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; background: #0f172a; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #1e293b; }
+        .control-group { background: #1e293b; padding: 12px; border-radius: 8px; border-top: 4px solid #38bdf8; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px; color: #94a3b8; }
+        input[type=range], select { width: 100%; cursor: pointer; background: #0f172a; color: #fff; border: 1px solid #38bdf8; padding: 5px; border-radius: 4px; box-sizing: border-box; margin-bottom: 8px; }
+        
+        #canvas-holder { width: 100%; border-radius: 12px; overflow: hidden; border: 2px solid #38bdf8; background: #020617; position: relative; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        .btn { flex: 1; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;}
+        .btn-add { background: #10b981; }
+        .btn-clear { background: #ef4444; }
+        
+        .data-panel { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; justify-content: center; }
+        .data-card { flex: 1; min-width: 220px; max-width: 300px; background: #0f172a; padding: 12px; border-radius: 10px; border-left: 5px solid #38bdf8; font-size: 12px; }
+        .card-pos { border-left-color: #3b82f6; }
+        .card-neg { border-left-color: #ef4444; }
+        
+        .data-title { font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #f8fafc; }
+        .vector-text { font-family: 'Courier New', monospace; color: #34d399; font-size: 11px; margin-top: 3px; display: block;}
+        .instruction { text-align: center; color: #64748b; font-size: 11px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <h2>Virtual Lab: Interaksi Gaya Coulomb & Analisis Vektor</h2>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Pilih Muatan untuk Diedit:</label>
+            <select id="charge-select" onchange="loadSelectedCharge()"></select>
+            
+            <label>Jenis Muatan:</label>
+            <select id="type-select" onchange="updateCurrentCharge()">
+                <option value="1">Positif (+)</option>
+                <option value="-1">Negatif (-)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Besar Muatan (q): <span id="q-label" style="color:#38bdf8">5</span> &mu;C</label>
+            <input type="range" id="q-slider" min="1" max="20" step="0.5" value="5" oninput="updateCurrentCharge()">
+            <p style="font-size: 10px; color:#64748b; margin:0;">*Ukuran lingkaran muatan proporsional terhadap nilai &mu;C.</p>
+        </div>
+
+        <div class="control-group" style="border-top-color: #10b981; display:flex; flex-direction:column; justify-content:center;">
+            <button class="btn btn-add" onclick="addNewCharge()">+ Tambah Muatan</button>
+            <button class="btn btn-clear" style="margin-top:8px;" onclick="clearAllCharges()">Hapus Semua</button>
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    <div class="instruction">💡 Info Praktikum: Geser muatan menggunakan mouse/kursor untuk melihat perubahan vektor gaya secara real-time!</div>
+
+    <div class="data-panel" id="data-panel-container"></div>
+</div>
+
+<script>
+let charges = [];
+let selectedIndex = 0;
+const k = 8.99e9; 
+const scalePxToMeter = 0.01; 
+let draggedCharge = null;
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 400);
+    canvas.parent('canvas-holder');
+    
+    charges.push(new Charge(width * 0.3, height * 0.5, 6, 1)); 
+    charges.push(new Charge(width * 0.7, height * 0.5, 6, -1)); 
+    
+    updateChargeDropdown();
+    loadSelectedCharge();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 400);
+}
+
+class Charge {
+    constructor(x, y, q, sign) {
+        this.x = x;
+        this.y = y;
+        this.q = q;       
+        this.sign = sign;   
+        this.fx = 0;      
+        this.fy = 0;      
+    }
+
+    get Radius() {
+        return map(this.q, 1, 20, 15, 40); 
+    }
+
+    display(index) {
+        noStroke();
+        if (this.sign > 0) {
+            fill(59, 130, 246, 40); 
+            ellipse(this.x, this.y, this.Radius * 2.5);
+            fill(37, 99, 235); 
+        } else {
+            fill(239, 68, 68, 40); 
+            ellipse(this.x, this.y, this.Radius * 2.5);
+            fill(220, 38, 38); 
+        }
+        
+        if (index === selectedIndex) {
+            stroke(255); strokeWeight(3); 
+        } else {
+            stroke(255, 100); strokeWeight(1);
+        }
+        
+        ellipse(this.x, this.y, this.Radius * 2);
+
+        fill(255); noStroke(); textStyle(BOLD); textSize(12); textAlign(CENTER, CENTER);
+        let signChar = this.sign > 0 ? "+" : "-";
+        text(signChar + "q" + (index + 1), this.x, this.y);
+        
+        this.drawForceVector();
+    }
+
+    drawForceVector() {
+        let fTotal = Math.sqrt(this.fx * this.fx + this.fy * this.fy);
+        if (fTotal < 1e-3) return; 
+
+        // FORMULA BARU: Menjamin panah selalu lebih panjang dari radius muatan
+        // fTotal^0.4 digunakan agar gaya kecil tetap terlihat memanjang, tapi gaya raksasa tidak kelewatan layar
+        let visualForce = Math.pow(fTotal, 0.4); 
+        
+        // Panjang minimum adalah Radius muatan + 30 piksel agar menonjol keluar
+        let baseLen = this.Radius + 30 + (visualForce * 25); 
+        baseLen = constrain(baseLen, this.Radius + 30, 250); // Maksimal panjang panah dibatasi 250px
+
+        let angle = Math.atan2(this.fy, this.fx);
+
+        push();
+        translate(this.x, this.y);
+        rotate(angle);
+        
+        // Gambar garis panah (Lebih tebal dan mencolok)
+        stroke(52, 211, 153); strokeWeight(4); 
+        line(0, 0, baseLen, 0);
+        
+        // Gambar kepala panah (Lebih besar)
+        fill(52, 211, 153); noStroke();
+        triangle(baseLen, 0, baseLen - 14, -7, baseLen - 14, 7);
+        pop();
+    }
+
+    isMouseOver() {
+        return dist(mouseX, mouseY, this.x, this.y) < this.Radius;
+    }
+}
+
+function draw() {
+    background(10, 15, 30);
+    drawGrid();
+    calculateForces();
+    
+    for (let i = 0; i < charges.length; i++) {
+        charges[i].display(i);
+    }
+    updateUIData();
+}
+
+function drawGrid() {
+    stroke(30, 41, 59); strokeWeight(1);
+    for (let x = 0; x < width; x += 40) line(x, 0, x, height);
+    for (let y = 0; y < height; y += 40) line(0, y, width, y);
+}
+
+function calculateForces() {
+    for (let i = 0; i < charges.length; i++) {
+        charges[i].fx = 0;
+        charges[i].fy = 0;
+    }
+
+    for (let i = 0; i < charges.length; i++) {
+        for (let j = 0; j < charges.length; j++) {
+            if (i === j) continue;
+            let c1 = charges[i], c2 = charges[j];
+            let dx_px = c1.x - c2.x, dy_px = c1.y - c2.y;
+            let r_px = dist(c1.x, c1.y, c2.x, c2.y);
+
+            if (r_px < 20) r_px = 20; 
+
+            let r_m = r_px * scalePxToMeter;
+            let q1_C = c1.q * 1e-6 * c1.sign;
+            let q2_C = c2.q * 1e-6 * c2.sign;
+
+            let f_mag = (k * Math.abs(q1_C * q2_C)) / (r_m * r_m);
+            let angle = Math.atan2(dy_px, dx_px);
+            let directionFactor = (c1.sign * c2.sign > 0) ? 1 : -1;
+
+            c1.fx += f_mag * Math.cos(angle) * directionFactor;
+            c1.fy += f_mag * Math.sin(angle) * directionFactor;
+        }
+    }
+}
+
+function mousePressed() {
+    for (let i = 0; i < charges.length; i++) {
+        if (charges[i].isMouseOver()) {
+            draggedCharge = charges[i];
+            selectedIndex = i;
+            updateChargeDropdown();
+            loadSelectedCharge();
+            break;
+        }
+    }
+}
+
+function mouseDragged() {
+    if (draggedCharge) {
+        draggedCharge.x = constrain(mouseX, 20, width - 20);
+        draggedCharge.y = constrain(mouseY, 20, height - 20);
+    }
+}
+function mouseReleased() { draggedCharge = null; }
+
+function updateChargeDropdown() {
+    let select = document.getElementById('charge-select');
+    select.innerHTML = "";
+    for (let i = 0; i < charges.length; i++) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = `Muatan q${i+1}`;
+        if (i === selectedIndex) opt.selected = true;
+        select.appendChild(opt);
+    }
+}
+
+function loadSelectedCharge() {
+    if (charges.length === 0) return;
+    selectedIndex = parseInt(document.getElementById('charge-select').value);
+    let c = charges[selectedIndex];
+    document.getElementById('type-select').value = c.sign;
+    document.getElementById('q-slider').value = c.q;
+    document.getElementById('q-label').innerText = c.q;
+}
+
+function updateCurrentCharge() {
+    if (charges.length === 0) return;
+    let c = charges[selectedIndex];
+    c.sign = parseInt(document.getElementById('type-select').value);
+    c.q = parseFloat(document.getElementById('q-slider').value);
+    document.getElementById('q-label').innerText = c.q;
+}
+
+function addNewCharge() {
+    if (charges.length >= 5) {
+        alert("Batas maksimum praktikum adalah 5 muatan agar layar tidak terlalu padat.");
+        return;
+    }
+    let rx = random(50, width - 50);
+    let ry = random(50, height - 50);
+    charges.push(new Charge(rx, ry, 5, 1));
+    selectedIndex = charges.length - 1;
+    updateChargeDropdown();
+    loadSelectedCharge();
+}
+
+function clearAllCharges() {
+    charges = [];
+    selectedIndex = 0;
+    updateChargeDropdown();
+    document.getElementById('data-panel-container').innerHTML = "";
+}
+
+function updateUIData() {
+    let container = document.getElementById('data-panel-container');
+    container.innerHTML = "";
+    for (let i = 0; i < charges.length; i++) {
+        let c = charges[i];
+        let fTotal = Math.sqrt(c.fx * c.fx + c.fy * c.fy);
+        let typeClass = c.sign > 0 ? "card-pos" : "card-neg";
+        let typeText = c.sign > 0 ? "Positif (+)" : "Negatif (-)";
+        
+        let card = document.createElement('div');
+        card.className = `data-card ${typeClass}`;
+        card.innerHTML = `
+            <div class="data-title">Muatan q${i+1} (${typeText})</div>
+            <div>Besar Muatan: <b>${c.q} &mu;C</b></div>
+            <div>Total Gaya: <b>${fTotal.toFixed(2)} N</b></div>
+            <span class="vector-text">Fx: ${c.fx.toFixed(2)} N<br>Fy: ${c.fy.toFixed(2)} N</span>
+        `;
+        container.appendChild(card);
+    }
+}
+</script>

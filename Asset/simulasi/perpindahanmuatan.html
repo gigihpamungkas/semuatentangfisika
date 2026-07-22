@@ -1,0 +1,370 @@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .main-container { width: 98%; max-width: 1200px; background: #1e293b; padding: 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #334155; }
+        h2 { text-align: center; color: #38bdf8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-size: 1.4rem; }
+        .subtitle { text-align: center; color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; }
+        
+        .ui-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; background: #0f172a; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #1e293b; }
+        .control-group { background: #1e293b; padding: 12px; border-radius: 8px; border-top: 4px solid #38bdf8; }
+        label { font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px; color: #94a3b8; }
+        select { width: 100%; cursor: pointer; background: #0f172a; color: #fff; border: 1px solid #38bdf8; padding: 8px; border-radius: 4px; box-sizing: border-box; font-size: 13px; }
+        
+        #canvas-holder { width: 100%; border-radius: 12px; overflow: hidden; border: 2px solid #38bdf8; background: #020617; position: relative; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+        .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;}
+        .btn-play { background: #10b981; }
+        .btn-play:hover { background: #059669; }
+        .btn-reset { background: #ef4444; }
+        .btn-reset:hover { background: #dc2626; }
+        
+        .explanation-panel { margin-top: 15px; background: #0f172a; padding: 15px; border-radius: 10px; border-left: 5px solid #3b82f6; font-size: 13px; line-height: 1.6; }
+        .charge-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px;}
+        .tag-pos { background: #3b82f6; color: white; }
+        .tag-neg { background: #ef4444; color: white; }
+        .tag-neu { background: #64748b; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <h2>Virtual Lab: Metode Perpindahan Muatan Listrik</h2>
+    <div class="subtitle">Visualisasi pergerakan elektron (e⁻) pada berbagai metode interaksi benda</div>
+    
+    <div class="ui-grid">
+        <div class="control-group">
+            <label>Metode Perpindahan:</label>
+            <select id="mode-select" onchange="updateScenarios()">
+                <option value="gosok">1. Penggosokan (Friction)</option>
+                <option value="sentuh">2. Sentuhan (Conduction)</option>
+                <option value="induksi">3. Induksi Listrik</option>
+                <option value="polarisasi">4. Polarisasi Isolator</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Pilih Pasangan Benda:</label>
+            <select id="scenario-select" onchange="resetSim()"></select>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-play" id="btn-anim" onclick="toggleAnimation()">▶ Mulai Simulasi</button>
+            <button class="btn btn-reset" onclick="resetSim()">↺ Reset Ulang</button>
+        </div>
+    </div>
+
+    <div id="canvas-holder"></div>
+    
+    <div class="explanation-panel" id="explanation-text">
+        <!-- Teks penjelasan akan diupdate via JS -->
+    </div>
+</div>
+
+<script>
+// --- KONFIGURASI STATE ---
+let animState = 0; // 0: Awal, 1: Mendekat, 2: Interaksi (Gosok/Sentuh), 3: Menjauh/Efek
+let animProgress = 0;
+let isPlaying = false;
+let currentMode = '';
+let currentScenario = '';
+
+// --- VARIABEL BENDA ---
+let obj1 = { x: 0, y: 0, baseX: 0, charge: 0, type: '' }; // Benda bergerak (Kiri)
+let obj2 = { x: 0, y: 0, baseX: 0, charge: 0, type: '' }; // Benda diam (Kanan)
+let papers = []; // Untuk efek polarisasi
+
+const scenarioData = {
+    'gosok': [
+        { id: 'sisir_rambut', label: 'Sisir Plastik & Rambut Kering', desc: 'Rambut cenderung melepaskan elektron. Saat digosok, elektron berpindah dari rambut ke sisir. Sisir menjadi <span class="charge-tag tag-neg">Negatif (-)</span> dan rambut menjadi <span class="charge-tag tag-pos">Positif (+)</span>.' },
+        { id: 'kaca_sutra', label: 'Batang Kaca & Kain Sutra', desc: 'Kaca cenderung melepaskan elektron. Saat digosok, elektron berpindah dari kaca ke sutra. Kaca menjadi <span class="charge-tag tag-pos">Positif (+)</span> dan sutra menjadi <span class="charge-tag tag-neg">Negatif (-)</span>.' },
+        { id: 'balon_wol', label: 'Balon Karet & Kain Wol', desc: 'Kain wol mudah melepaskan elektron. Elektron berpindah dari wol ke balon. Balon menjadi <span class="charge-tag tag-neg">Negatif (-)</span> dan wol menjadi <span class="charge-tag tag-pos">Positif (+)</span>.' }
+    ],
+    'sentuh': [
+        { id: 'batang_logam', label: 'Batang Bermuatan (-) & Bola Logam', desc: 'Saat batang negatif menyentuh konduktor netral, terjadi tolakan antar elektron di batang sehingga sebagian elektron mengalir ke bola logam. Keduanya kini bermuatan <span class="charge-tag tag-neg">Negatif (-)</span>.' }
+    ],
+    'induksi': [
+        { id: 'ind_batang_logam', label: 'Batang (-) Mendekati Logam Netral', desc: 'Batang negatif didekatkan (tanpa menyentuh). Elektron pada bola logam tertolak ke sisi kanan, meninggalkan sisi kiri bermuatan positif. Ini disebut <b>pemisahan muatan</b> atau pengkutuban.' }
+    ],
+    'polarisasi': [
+        { id: 'balon_kertas', label: 'Balon (-) & Potongan Kertas Netral', desc: 'Kertas adalah isolator, elektron tidak bisa mengalir bebas. Namun molekul kertas akan <b>terpolarisasi</b> (sisi molekul yang positif berputar menghadap balon). Karena gaya tarik lebih dekat dari gaya tolak, kertas melompat menempel ke balon.' }
+    ]
+};
+
+function setup() {
+    let container = document.getElementById('canvas-holder');
+    let canvas = createCanvas(container.offsetWidth, 350);
+    canvas.parent('canvas-holder');
+    updateScenarios();
+}
+
+function windowResized() {
+    let container = document.getElementById('canvas-holder');
+    resizeCanvas(container.offsetWidth, 350);
+    resetSim();
+}
+
+function updateScenarios() {
+    let modeSel = document.getElementById('mode-select').value;
+    let scanSel = document.getElementById('scenario-select');
+    scanSel.innerHTML = '';
+    
+    scenarioData[modeSel].forEach(sc => {
+        let opt = document.createElement('option');
+        opt.value = sc.id;
+        opt.innerText = sc.label;
+        scanSel.appendChild(opt);
+    });
+    resetSim();
+}
+
+function resetSim() {
+    isPlaying = false;
+    animState = 0;
+    animProgress = 0;
+    document.getElementById('btn-anim').innerText = "▶ Mulai Simulasi";
+    document.getElementById('btn-anim').className = "btn btn-play";
+    
+    currentMode = document.getElementById('mode-select').value;
+    currentScenario = document.getElementById('scenario-select').value;
+    
+    // Update Penjelasan
+    let scData = scenarioData[currentMode].find(x => x.id === currentScenario);
+    document.getElementById('explanation-text').innerHTML = `<b>Analisis:</b> ${scData.desc}`;
+    
+    // Setup Posisi Awal
+    obj1.baseX = width * 0.25; obj1.y = height / 2; obj1.charge = 0;
+    obj2.baseX = width * 0.75; obj2.y = height / 2; obj2.charge = 0;
+    
+    if(currentScenario === 'balon_kertas') {
+        obj1.charge = -1; // Balon sudah bermuatan
+        papers = [];
+        for(let i=0; i<15; i++) {
+            papers.push({ x: obj2.baseX - 40 + random(80), y: height - 40, r: random(-20, 20), active: false, polar: false });
+        }
+    }
+    if(currentMode === 'sentuh' || currentMode === 'induksi') {
+        obj1.charge = -1; // Batang sudah bermuatan
+    }
+    
+    obj1.x = obj1.baseX;
+    obj2.x = obj2.baseX;
+}
+
+function toggleAnimation() {
+    isPlaying = !isPlaying;
+    let btn = document.getElementById('btn-anim');
+    if(isPlaying) {
+        btn.innerText = "⏸ Pause Simulasi";
+        btn.className = "btn btn-reset";
+    } else {
+        btn.innerText = "▶ Lanjut Simulasi";
+        btn.className = "btn btn-play";
+    }
+}
+
+function draw() {
+    background(10, 15, 30);
+    drawGrid();
+    
+    if (isPlaying) runAnimationLogic();
+    
+    // Gambar Objek 2 (Kanan) - Diam
+    push();
+    translate(obj2.x, obj2.y);
+    drawObject2();
+    pop();
+
+    // Gambar Objek 1 (Kiri) - Bergerak
+    push();
+    translate(obj1.x, obj1.y);
+    drawObject1();
+    pop();
+    
+    // Gambar Kertas khusus polarisasi
+    if(currentScenario === 'balon_kertas') drawPapers();
+    
+    drawHUD();
+}
+
+function runAnimationLogic() {
+    let speed = 0.5;
+    animProgress += speed;
+    
+    // STAGE 0: Diam -> STAGE 1: Mendekat
+    if (animState === 0) animState = 1;
+    
+    if (animState === 1) {
+        // Gerak ke kanan
+        obj1.x = lerp(obj1.baseX, obj2.baseX - 120, animProgress / 100);
+        if (animProgress >= 100) { animState = 2; animProgress = 0; }
+    } 
+    else if (animState === 2) {
+        // Interaksi
+        if (currentMode === 'gosok') {
+            // Efek Gosok (Naik Turun / Kiri Kanan)
+            obj1.y = (height / 2) + sin(animProgress * 0.5) * 30;
+            // Transfer muatan perlahan di tengah proses
+            if(animProgress > 50) setFrictionCharges();
+        } 
+        else if (currentMode === 'sentuh') {
+            obj1.x = obj2.baseX - 90; // Menyentuh
+            if(animProgress > 50) { obj1.charge = -0.5; obj2.charge = -0.5; }
+        }
+        else if (currentMode === 'induksi') {
+            // Jarak dekat tapi tidak sentuh
+            if(animProgress > 20) obj2.charge = 'polarized'; 
+        }
+        else if (currentMode === 'polarisasi') {
+            obj1.x = obj2.baseX - 100;
+            if(animProgress > 20) {
+                papers.forEach(p => p.polar = true);
+            }
+            if(animProgress > 60) {
+                papers.forEach(p => {
+                    p.y = lerp(p.y, height/2 + random(-20,20), 0.1);
+                    p.x = lerp(p.x, obj1.x + 60, 0.1);
+                });
+            }
+        }
+        
+        if (animProgress >= 150) { animState = 3; animProgress = 0; }
+    }
+    else if (animState === 3) {
+        // Menjauh
+        obj1.y = lerp(obj1.y, height / 2, 0.1);
+        if(currentMode !== 'polarisasi' && currentMode !== 'sentuh') {
+            obj1.x = lerp(obj1.x, obj1.baseX, animProgress / 100);
+        }
+        if (animProgress >= 100) { isPlaying = false; }
+    }
+}
+
+function setFrictionCharges() {
+    if(currentScenario === 'sisir_rambut') { obj1.charge = -1; obj2.charge = 1; }
+    if(currentScenario === 'kaca_sutra') { obj1.charge = 1; obj2.charge = -1; }
+    if(currentScenario === 'balon_wol') { obj1.charge = -1; obj2.charge = 1; }
+}
+
+// --- FUNGSI MENGGAMBAR BENDA ---
+function drawObject1() {
+    if(currentScenario.includes('sisir')) {
+        fill(245, 158, 11); noStroke(); // Orange Sisir
+        rect(-40, -10, 100, 20, 5);
+        for(let i=0; i<80; i+=8) rect(-30 + i, 10, 4, 25, 2);
+        drawChargeSymbols(0, 0, obj1.charge);
+    } 
+    else if (currentScenario.includes('kaca') || currentMode === 'sentuh' || currentMode === 'induksi') {
+        fill(125, 211, 252, 200); stroke(56, 189, 248); strokeWeight(2);
+        rect(-60, -15, 140, 30, 15);
+        drawChargeSymbols(0, 0, obj1.charge);
+    }
+    else if (currentScenario.includes('balon')) {
+        fill(239, 68, 68); stroke(185, 28, 28); strokeWeight(2);
+        ellipse(0, 0, 90, 110);
+        triangle(0, 55, -10, 70, 10, 70);
+        drawChargeSymbols(0, 0, obj1.charge);
+    }
+}
+
+function drawObject2() {
+    if(currentScenario.includes('rambut')) {
+        stroke(161, 98, 7); strokeWeight(4); noFill();
+        for(let i=-50; i<50; i+=10) {
+            bezier(-20+i, -60, -80+i, -20, 80+i, 20, i, 80);
+        }
+        drawChargeSymbols(0, 0, obj2.charge);
+    }
+    else if (currentScenario.includes('sutra') || currentScenario.includes('wol')) {
+        fill(currentScenario.includes('sutra') ? color(216, 180, 254) : color(203, 213, 225));
+        noStroke();
+        beginShape(); // Bikin bentuk kain abstrak
+        for (let a = 0; a < TWO_PI; a += 0.5) {
+            let r = 60 + noise(a) * 20;
+            vertex(r * cos(a), r * sin(a));
+        }
+        endShape(CLOSE);
+        drawChargeSymbols(0, 0, obj2.charge);
+    }
+    else if (currentMode === 'sentuh' || currentMode === 'induksi') {
+        // Bola Logam dan Tiang Isolator
+        fill(100); noStroke(); rect(-10, 45, 20, 100); // Tiang
+        fill(226, 232, 240); stroke(148, 163, 184); strokeWeight(3);
+        ellipse(0, 0, 90, 90); // Bola
+        
+        if (obj2.charge === 'polarized') {
+            // Induksi: kiri positif, kanan negatif
+            drawSymbol(-25, 0, '+'); drawSymbol(-25, -20, '+'); drawSymbol(-25, 20, '+');
+            drawSymbol(25, 0, '-'); drawSymbol(25, -20, '-'); drawSymbol(25, 20, '-');
+        } else {
+            drawChargeSymbols(0, 0, obj2.charge);
+        }
+    }
+}
+
+function drawPapers() {
+    // Meja
+    fill(51, 65, 85); noStroke();
+    rect(0, height-30, width, 30);
+    
+    // Kertas
+    papers.forEach(p => {
+        push();
+        translate(p.x, p.y);
+        rotate(radians(p.r));
+        fill(255); stroke(200); strokeWeight(1);
+        rect(-8, -5, 16, 10);
+        if(p.polar) {
+            fill(239, 68, 68); textSize(10); textStyle(BOLD); textAlign(CENTER, CENTER); noStroke();
+            text('+', -3, 0); // Sisi + menghadap balon (kiri)
+            fill(59, 130, 246);
+            text('-', 3, 0);  // Sisi - menjauh
+        }
+        pop();
+    });
+}
+
+// --- FUNGSI HELPER MUATAN ---
+function drawChargeSymbols(x, y, netCharge) {
+    if (netCharge === 0) {
+        // Netral: Campur + dan -
+        drawSymbol(x - 20, y - 20, '+'); drawSymbol(x + 20, y + 20, '-');
+        drawSymbol(x + 20, y - 20, '+'); drawSymbol(x - 20, y + 20, '-');
+    } else if (netCharge > 0) {
+        // Positif
+        drawSymbol(x - 20, y - 10, '+'); drawSymbol(x + 20, y + 10, '+');
+        drawSymbol(x, y + 25, '+'); drawSymbol(x, y - 25, '+');
+    } else if (netCharge < 0) {
+        // Negatif
+        drawSymbol(x - 20, y - 10, '-'); drawSymbol(x + 20, y + 10, '-');
+        drawSymbol(x, y + 25, '-'); drawSymbol(x, y - 25, '-');
+        if (netCharge === -1) { // Sangat negatif (sebelum disentuh/dibagi)
+            drawSymbol(x-30, y+20, '-'); drawSymbol(x+30, y-20, '-');
+        }
+    }
+}
+
+function drawSymbol(x, y, type) {
+    noStroke();
+    if (type === '+') fill(239, 68, 68); // Merah untuk proton / sisi positif
+    else fill(59, 130, 246); // Biru untuk elektron / sisi negatif
+    ellipse(x, y, 16, 16);
+    fill(255); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD);
+    text(type, x, y);
+}
+
+function drawGrid() {
+    stroke(30, 41, 59); strokeWeight(1);
+    for (let x = 0; x < width; x += 40) line(x, 0, x, height);
+    for (let y = 0; y < height; y += 40) line(0, y, width, y);
+}
+
+function drawHUD() {
+    fill(255); noStroke(); textSize(12); textAlign(LEFT, TOP);
+    let statusText = "Status: Menunggu Insturksi...";
+    if (animState === 1) statusText = "Status: Benda didekatkan...";
+    if (animState === 2) statusText = "Status: Terjadi Interaksi (Perpindahan/Respon Elektron)!";
+    if (animState === 3) statusText = "Status: Selesai. Perhatikan muatan akhir.";
+    text(statusText, 15, 15);
+}
+</script>
